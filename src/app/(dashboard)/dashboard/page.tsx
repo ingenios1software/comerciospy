@@ -1,9 +1,55 @@
+"use client";
+
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
 import { Sidebar } from '@/components/layout/sidebar';
 import { samplePublicaciones } from '@/lib/mockData';
+import { getAllComercios, getAllPublications, getAllUsers, getLatestPublications } from '@/lib/firebase/firestore';
 import { PublicacionCard } from '@/components/publicaciones/publicacion-card';
+import type { Publicacion } from '@/types';
 
 export default function DashboardPage() {
+  const [comerciosCount, setComerciosCount] = useState(0);
+  const [publicacionesCount, setPublicacionesCount] = useState(0);
+  const [usuariosCount, setUsuariosCount] = useState(0);
+  const [publicaciones, setPublicaciones] = useState<Publicacion[]>(samplePublicaciones.slice(0, 2));
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const comercios = await getAllComercios();
+        setComerciosCount(comercios.length);
+      } catch {
+        setComerciosCount(0);
+      }
+
+      try {
+        const publicacionesData = await getAllPublications();
+        setPublicacionesCount(publicacionesData.length);
+      } catch {
+        setPublicacionesCount(samplePublicaciones.length);
+      }
+
+      try {
+        const users = await getAllUsers();
+        setUsuariosCount(users.length);
+      } catch {
+        setUsuariosCount(0);
+      }
+
+      try {
+        const latest = await getLatestPublications(3);
+        if (latest.length > 0) {
+          setPublicaciones(latest);
+        }
+      } catch {
+        setPublicaciones(samplePublicaciones.slice(0, 2));
+      }
+    };
+
+    loadData();
+  }, []);
+
   return (
     <main className="min-h-screen bg-slate-950 text-slate-50">
       <div className="lg:flex lg:min-h-screen">
@@ -22,15 +68,15 @@ export default function DashboardPage() {
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="rounded-3xl bg-slate-950/90 p-5">
                 <p className="text-sm text-slate-400">Comercios activos</p>
-                <p className="mt-4 text-3xl font-semibold text-slate-100">12</p>
+                <p className="mt-4 text-3xl font-semibold text-slate-100">{comerciosCount}</p>
               </div>
               <div className="rounded-3xl bg-slate-950/90 p-5">
                 <p className="text-sm text-slate-400">Publicaciones</p>
-                <p className="mt-4 text-3xl font-semibold text-slate-100">24</p>
+                <p className="mt-4 text-3xl font-semibold text-slate-100">{publicacionesCount}</p>
               </div>
               <div className="rounded-3xl bg-slate-950/90 p-5">
                 <p className="text-sm text-slate-400">Usuarios</p>
-                <p className="mt-4 text-3xl font-semibold text-slate-100">8</p>
+                <p className="mt-4 text-3xl font-semibold text-slate-100">{usuariosCount}</p>
               </div>
             </div>
             <div className="rounded-[2rem] bg-slate-950/90 p-5">
@@ -44,9 +90,13 @@ export default function DashboardPage() {
                 </Link>
               </div>
               <div className="mt-4 space-y-4">
-                {samplePublicaciones.slice(0, 2).map((publicacion) => (
-                  <PublicacionCard key={publicacion.id} publicacion={publicacion} />
-                ))}
+                {publicaciones.length > 0 ? (
+                  publicaciones.map((publicacion) => (
+                    <PublicacionCard key={publicacion.id} publicacion={publicacion} />
+                  ))
+                ) : (
+                  <p className="text-slate-400">No hay publicaciones recientes.</p>
+                )}
               </div>
             </div>
           </div>

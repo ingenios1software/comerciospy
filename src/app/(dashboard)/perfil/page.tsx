@@ -1,12 +1,27 @@
 "use client";
 
-import { sampleComercios } from '@/lib/mockData';
+import { useEffect, useState } from 'react';
 import { useAuth } from '@/lib/firebase/auth-context';
-
-const comercio = sampleComercios[0];
+import { getComercioById } from '@/lib/firebase/firestore';
+import type { Comercio } from '@/types';
 
 export default function PerfilPage() {
   const { user, profile, loading } = useAuth();
+  const [comercio, setComercio] = useState<Comercio | null>(null);
+
+  useEffect(() => {
+    const loadCommerce = async () => {
+      if (!profile?.comercioId) return;
+      try {
+        const data = await getComercioById(profile.comercioId);
+        setComercio(data);
+      } catch {
+        setComercio(null);
+      }
+    };
+
+    loadCommerce();
+  }, [profile]);
 
   if (loading) {
     return (
@@ -39,13 +54,15 @@ export default function PerfilPage() {
               </div>
               <div className="rounded-3xl bg-slate-900/90 p-4 text-sm text-slate-400">
                 <p className="text-slate-100">Comercio</p>
-                <p className="mt-3 text-base text-slate-100">{profile?.comercioId ?? 'Sin comercio asignado'}</p>
+                <p className="mt-3 text-base text-slate-100">{comercio?.nombre ?? profile?.comercioId ?? 'Sin comercio asignado'}</p>
               </div>
             </div>
-            <div className="rounded-3xl bg-slate-950/90 p-4 text-sm text-slate-300">
-              <p className="text-slate-200">Consejo</p>
-              <p className="mt-2">Actualiza tu comercio y publica ofertas para mejorar tu visibilidad.</p>
-            </div>
+            {comercio ? (
+              <div className="rounded-3xl bg-slate-950/90 p-4 text-sm text-slate-300">
+                <p className="text-slate-200">Detalle del comercio</p>
+                <p className="mt-2 text-slate-300">{comercio.descripcion}</p>
+              </div>
+            ) : null}
           </div>
         </section>
 
@@ -53,12 +70,12 @@ export default function PerfilPage() {
           <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Actividad</p>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <div className="rounded-3xl bg-slate-950/90 p-4 text-sm">
-              <p className="font-semibold text-slate-100">12</p>
-              <p className="text-slate-400">Publicaciones activas</p>
+              <p className="font-semibold text-slate-100">{comercio?.activo ? 'Activo' : 'Pendiente'}</p>
+              <p className="text-slate-400">Estado del comercio</p>
             </div>
             <div className="rounded-3xl bg-slate-950/90 p-4 text-sm">
-              <p className="font-semibold text-slate-100">8</p>
-              <p className="text-slate-400">Consultas recibidas</p>
+              <p className="font-semibold text-slate-100">{comercio?.rubro ?? 'Sin rubro'}</p>
+              <p className="text-slate-400">Rubro principal</p>
             </div>
           </div>
         </section>

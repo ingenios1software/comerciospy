@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { getAllComercios, getPublicationsByCommerce } from '@/lib/firebase/firestore';
+import { getComercioById, getPublicationsByCommerce } from '@/lib/firebase/firestore';
 import { PublicacionCard } from '@/components/publicaciones/publicacion-card';
 import type { Comercio, Publicacion } from '@/types';
 
@@ -19,8 +19,7 @@ export default function ComercioDetailPage() {
       if (!commerceId) return;
 
       try {
-        const comercios = await getAllComercios();
-        const comercioItem = comercios.find((item) => item.id === commerceId) ?? null;
+        const comercioItem = await getComercioById(commerceId);
         setComercio(comercioItem);
 
         if (comercioItem) {
