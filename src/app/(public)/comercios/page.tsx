@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { CategoryPills } from '@/components/ui/category-pills';
 import { CommerceCard } from '@/components/comercios/commerce-card';
 import { SearchBar } from '@/components/ui/search-bar';
@@ -11,10 +11,11 @@ import { getAllComercios } from '@/lib/firebase/firestore';
 import type { Comercio } from '@/types';
 
 export default function ComerciosPage() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [comercios, setComercios] = useState<Comercio[]>([]);
   const [search, setSearch] = useState(searchParams.get('search') ?? '');
-  const [selectedCategory, setSelectedCategory] = useState('Todos');
+  const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') ?? 'Todos');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -34,7 +35,23 @@ export default function ComerciosPage() {
 
   useEffect(() => {
     setSearch(searchParams.get('search') ?? '');
+    setSelectedCategory(searchParams.get('category') ?? 'Todos');
   }, [searchParams]);
+
+  const handleSearch = () => {
+    const params = new URLSearchParams();
+    if (search.trim()) params.set('search', search.trim());
+    if (selectedCategory !== 'Todos') params.set('category', selectedCategory);
+    router.push(`/comercios${params.toString() ? `?${params.toString()}` : ''}`);
+  };
+
+  const handleSelectCategory = (category: string) => {
+    setSelectedCategory(category);
+    const params = new URLSearchParams();
+    if (search.trim()) params.set('search', search.trim());
+    if (category !== 'Todos') params.set('category', category);
+    router.push(`/comercios${params.toString() ? `?${params.toString()}` : ''}`);
+  };
 
   const filteredComercios = useMemo(
     () =>
@@ -74,6 +91,7 @@ export default function ComerciosPage() {
               <SearchBar
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
+                onSubmit={handleSearch}
                 placeholder="Buscar comercios, ofertas o ciudad"
                 buttonLabel="Buscar"
               />
@@ -83,7 +101,7 @@ export default function ComerciosPage() {
               <CategoryPills
                 categories={categories}
                 selectedCategory={selectedCategory}
-                onSelectCategory={setSelectedCategory}
+                onSelectCategory={handleSelectCategory}
               />
             </div>
           </section>

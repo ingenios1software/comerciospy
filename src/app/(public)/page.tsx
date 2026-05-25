@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { CommerceCard } from '@/components/comercios/commerce-card';
 import { PublicacionCard } from '@/components/publicaciones/publicacion-card';
 import { CategoryPills } from '@/components/ui/category-pills';
+import { HeroSection } from '@/components/ui/hero-section';
 import { SearchBar } from '@/components/ui/search-bar';
 import { SectionHeading } from '@/components/ui/section-heading';
 import { categories } from '@/lib/categories';
@@ -65,18 +66,37 @@ export default function Home() {
   }, [comercios, searchValue, selectedCategory]);
 
   const handleSearch = () => {
-    if (!searchValue.trim()) {
-      router.push('/comercios');
-      return;
+    const params = new URLSearchParams();
+
+    if (searchValue.trim()) {
+      params.set('search', searchValue.trim());
     }
 
-    router.push(`/comercios?search=${encodeURIComponent(searchValue.trim())}`);
+    if (selectedCategory !== 'Todos') {
+      params.set('category', selectedCategory);
+    }
+
+    const queryString = params.toString();
+    router.push(`/comercios${queryString ? `?${queryString}` : ''}`);
+  };
+
+  const handleSelectCategory = (category: string) => {
+    setSelectedCategory(category);
+    const params = new URLSearchParams();
+
+    if (category !== 'Todos') {
+      params.set('category', category);
+    }
+
+    router.push(`/comercios${params.toString() ? `?${params.toString()}` : ''}`);
   };
 
   return (
     <main className="min-h-screen bg-slate-950 text-slate-50">
       <div className="mx-auto max-w-6xl px-4 pb-32 pt-28 sm:px-6">
-        <section className="rounded-[2rem] bg-slate-900/95 p-5 shadow-soft ring-1 ring-white/10 sm:p-6">
+        <HeroSection />
+
+        <section className="mt-6 rounded-[2rem] bg-slate-900/95 p-5 shadow-soft ring-1 ring-white/10 sm:p-6">
           <SectionHeading
             title="Guía inteligente de comercios locales"
             description="Encuentra ofertas, horarios y comercios verificados con una experiencia móvil rápida e intuitiva."
@@ -96,7 +116,7 @@ export default function Home() {
               <CategoryPills
                 categories={categories}
                 selectedCategory={selectedCategory}
-                onSelectCategory={setSelectedCategory}
+                onSelectCategory={handleSelectCategory}
               />
             </div>
 
