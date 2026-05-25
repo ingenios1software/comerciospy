@@ -5,6 +5,7 @@ export const featuredComercios: CommercePreview[] = [
     id: 'c1',
     nombre: 'Miga Bakery',
     rubro: 'Panadería artesanal',
+    categoria: 'Panadería',
     ciudad: 'Rosario',
     imagen: 'https://images.unsplash.com/photo-1511032481081-6cb8a6a398ca?auto=format&fit=crop&w=800&q=60'
   },
@@ -12,6 +13,7 @@ export const featuredComercios: CommercePreview[] = [
     id: 'c2',
     nombre: 'Fit Market',
     rubro: 'Productos saludables',
+    categoria: 'Bienestar',
     ciudad: 'Salta',
     imagen: 'https://images.unsplash.com/photo-1516251193007-45ef944ab0c6?auto=format&fit=crop&w=800&q=60'
   },
@@ -19,6 +21,7 @@ export const featuredComercios: CommercePreview[] = [
     id: 'c3',
     nombre: 'Tienda Verde',
     rubro: 'Alimentos saludables',
+    categoria: 'Comida',
     ciudad: 'Córdoba',
     imagen: 'https://images.unsplash.com/photo-1498654896293-37aacf113fd9?auto=format&fit=crop&w=800&q=60'
   }
@@ -29,6 +32,7 @@ export const sampleComercios: Comercio[] = [
     id: 'c1',
     nombre: 'Miga Bakery',
     rubro: 'Panadería artesanal',
+    categoria: 'Panadería',
     descripcion: 'Pan fresco, bebidas y desayunos especiales hechos con ingredientes locales.',
     ciudad: 'Rosario',
     direccion: 'Mitre 123',
@@ -48,6 +52,7 @@ export const sampleComercios: Comercio[] = [
     id: 'c2',
     nombre: 'Fit Market',
     rubro: 'Productos saludables',
+    categoria: 'Bienestar',
     descripcion: 'Tienda con opciones naturales, snacks y suplementos para una vida activa.',
     ciudad: 'Salta',
     direccion: 'San Martín 567',

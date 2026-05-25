@@ -13,6 +13,7 @@ export type CommercePreview = {
   nombre: string;
   rubro: string;
   ciudad: string;
+  categoria: string;
   imagen: string;
 };
 
@@ -22,6 +23,7 @@ export type Comercio = {
   rubro: string;
   descripcion: string;
   ciudad: string;
+  categoria: string;
   direccion: string;
   whatsapp: string;
   logoUrl: string;

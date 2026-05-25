@@ -62,8 +62,15 @@ export default function ComercioDetailPage() {
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.2),_transparent_35%)]" />
             <img src={comercio.portadaUrl} alt={comercio.nombre} className="h-56 w-full object-cover opacity-80" />
             <div className="absolute inset-x-0 bottom-0 px-5 pb-5 text-slate-50">
-              <p className="text-xs uppercase tracking-[0.3em] text-cyan-200/80">{comercio.rubro}</p>
-              <h1 className="mt-2 text-3xl font-semibold">{comercio.nombre}</h1>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="rounded-full bg-cyan-500/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-cyan-200">
+                  {comercio.categoria}
+                </span>
+                <span className="rounded-full bg-slate-950/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-300">
+                  {comercio.rubro}
+                </span>
+              </div>
+              <h1 className="mt-3 text-3xl font-semibold">{comercio.nombre}</h1>
               <p className="mt-2 text-sm text-slate-200">{comercio.direccion} · {comercio.ciudad}</p>
             </div>
           </div>

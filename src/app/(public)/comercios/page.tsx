@@ -1,15 +1,20 @@
 "use client";
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { CategoryPills } from '@/components/ui/category-pills';
 import { CommerceCard } from '@/components/comercios/commerce-card';
 import { SearchBar } from '@/components/ui/search-bar';
+import { categories } from '@/lib/categories';
 import { getAllComercios } from '@/lib/firebase/firestore';
 import type { Comercio } from '@/types';
 
 export default function ComerciosPage() {
+  const searchParams = useSearchParams();
   const [comercios, setComercios] = useState<Comercio[]>([]);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(searchParams.get('search') ?? '');
+  const [selectedCategory, setSelectedCategory] = useState('Todos');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -27,8 +32,20 @@ export default function ComerciosPage() {
     loadComercios();
   }, []);
 
-  const filteredComercios = comercios.filter((comercio) =>
-    `${comercio.nombre} ${comercio.rubro} ${comercio.ciudad}`.toLowerCase().includes(search.toLowerCase())
+  useEffect(() => {
+    setSearch(searchParams.get('search') ?? '');
+  }, [searchParams]);
+
+  const filteredComercios = useMemo(
+    () =>
+      comercios.filter((comercio) => {
+        const matchesCategory = selectedCategory === 'Todos' || comercio.categoria === selectedCategory;
+        const matchesSearch = `${comercio.nombre} ${comercio.rubro} ${comercio.ciudad} ${comercio.categoria}`
+          .toLowerCase()
+          .includes(search.toLowerCase());
+        return matchesCategory && matchesSearch;
+      }),
+    [comercios, search, selectedCategory]
   );
 
   return (
@@ -38,8 +55,8 @@ export default function ComerciosPage() {
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <p className="text-xs uppercase tracking-[0.3em] text-cyan-300/80">Comercios</p>
-              <h1 className="mt-2 text-3xl font-semibold">Explora y encuentra tu comercio ideal</h1>
-              <p className="mt-2 text-sm text-slate-400">Buscador rápido pensado para pantalla chica y navegación táctil.</p>
+              <h1 className="mt-2 text-3xl font-semibold">Explora tu comercio ideal</h1>
+              <p className="mt-2 text-sm text-slate-400">Navega por categoría y busca rápidamente desde tu celular.</p>
             </div>
             <Link href="/registro" className="rounded-full bg-cyan-500 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400">
               Crear comercio
@@ -48,28 +65,34 @@ export default function ComerciosPage() {
         </section>
 
         <div className="space-y-5">
-          <div className="rounded-[2rem] bg-slate-900/95 p-5 shadow-soft ring-1 ring-white/10 sm:p-6">
+          <section className="rounded-[2rem] bg-slate-900/95 p-5 shadow-soft ring-1 ring-white/10 sm:p-6">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Buscar</p>
-                <p className="mt-2 text-sm text-slate-400">Filtra comercios por nombre, rubro o ciudad.</p>
+                <p className="mt-2 text-sm text-slate-400">Filtra por nombre, rubro, ciudad o categoría.</p>
               </div>
-              <div className="flex w-full max-w-md items-center gap-3">
-                <input
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Buscar comercios, ofertas o ciudad"
-                  className="w-full rounded-3xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-slate-100 outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
-                />
-              </div>
+              <SearchBar
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Buscar comercios, ofertas o ciudad"
+                buttonLabel="Buscar"
+              />
             </div>
-          </div>
+
+            <div className="mt-5">
+              <CategoryPills
+                categories={categories}
+                selectedCategory={selectedCategory}
+                onSelectCategory={setSelectedCategory}
+              />
+            </div>
+          </section>
 
           <section className="rounded-[2rem] bg-slate-900/95 p-5 shadow-soft ring-1 ring-white/10 sm:p-6">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Comercios</p>
-                <h2 className="mt-2 text-xl font-semibold">Resultados</h2>
+                <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Resultados</p>
+                <h2 className="mt-2 text-xl font-semibold">Comercios disponibles</h2>
               </div>
               <Link href="/publicar" className="rounded-full bg-cyan-500 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400">
                 Agregar nueva
@@ -81,7 +104,7 @@ export default function ComerciosPage() {
               ) : filteredComercios.length > 0 ? (
                 filteredComercios.map((comercio) => <CommerceCard key={comercio.id} comercio={comercio} />)
               ) : (
-                <p className="text-slate-400">No se encontraron comercios para tu búsqueda.</p>
+                <p className="text-slate-400">No se encontraron comercios que coincidan con tu búsqueda.</p>
               )}
             </div>
           </section>
