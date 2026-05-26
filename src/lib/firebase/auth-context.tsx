@@ -23,7 +23,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const auth = getAuthInstance();
+    let auth: ReturnType<typeof getAuthInstance>;
+
+    try {
+      auth = getAuthInstance();
+    } catch (error) {
+      console.warn(error instanceof Error ? error.message : error);
+      setUser(null);
+      setProfile(null);
+      setLoading(false);
+      return undefined;
+    }
+
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
 
