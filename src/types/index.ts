@@ -1,9 +1,18 @@
+export type UserRole = 'superadmin' | 'admin' | 'comercio' | 'usuario' | 'cliente';
+
 export type UsuarioApp = {
   id: string;
   nombre: string;
   email: string;
-  rol: 'admin' | 'comercio' | 'cliente';
+  rol: UserRole;
   comercioId?: string;
+  activo: boolean;
+  creadoEn: string;
+};
+
+export type Categoria = {
+  id: string;
+  nombre: string;
   activo: boolean;
   creadoEn: string;
 };
@@ -15,20 +24,31 @@ export type CommercePreview = {
   ciudad: string;
   categoria: string;
   imagen: string;
+  telefono?: string;
+  whatsapp?: string;
+  direccion?: string;
+  horario?: string;
+  fotos?: string[];
 };
 
 export type Comercio = {
   id: string;
+  ownerId?: string;
   nombre: string;
   rubro: string;
   descripcion: string;
+  resumen?: string;
   ciudad: string;
   categoria: string;
   direccion: string;
+  telefono?: string;
   whatsapp: string;
   logoUrl: string;
   portadaUrl: string;
+  fotos?: string[];
+  servicios?: string[];
   horario: string;
+  ubicacionUrl?: string;
   ubicacion: {
     lat: number;
     lng: number;
@@ -50,4 +70,14 @@ export type Publicacion = {
   ciudad: string;
   activo: boolean;
   creadoEn: string;
+};
+
+export type AiPublicationSuggestion = {
+  titulo: string;
+  descripcion: string;
+  categoria: string;
+  tipo: Publicacion['tipo'];
+  ideas: string[];
+  mejorasFoto: string[];
+  textoWhatsapp: string;
 };

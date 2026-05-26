@@ -1,25 +1,26 @@
 "use client";
 
 import Link from 'next/link';
+import { MessageCircle, Search, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { CommerceCard } from '@/components/comercios/commerce-card';
 import { PublicacionCard } from '@/components/publicaciones/publicacion-card';
 import { CategoryPills } from '@/components/ui/category-pills';
-import { HeroSection } from '@/components/ui/hero-section';
 import { SearchBar } from '@/components/ui/search-bar';
-import { SectionHeading } from '@/components/ui/section-heading';
 import { categories } from '@/lib/categories';
+import { cityMatches, getCityOptions } from '@/lib/cities';
 import { getAllComercios, getLatestPublications } from '@/lib/firebase/firestore';
-import { featuredComercios, samplePublicaciones } from '@/lib/mockData';
-import type { Comercio, CommercePreview, Publicacion } from '@/types';
+import { sampleComercios, samplePublicaciones } from '@/lib/mockData';
+import type { Comercio, Publicacion } from '@/types';
 
 export default function Home() {
   const router = useRouter();
-  const [comercios, setComercios] = useState<Array<Comercio | CommercePreview>>(featuredComercios);
+  const [comercios, setComercios] = useState<Comercio[]>(sampleComercios);
   const [publicaciones, setPublicaciones] = useState<Publicacion[]>(samplePublicaciones);
   const [searchValue, setSearchValue] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Todos');
+  const [selectedCity, setSelectedCity] = useState('Todas');
   const [loadingComercios, setLoadingComercios] = useState(true);
   const [loadingPublicaciones, setLoadingPublicaciones] = useState(true);
 
@@ -27,11 +28,9 @@ export default function Home() {
     const loadData = async () => {
       try {
         const comerciosData = await getAllComercios();
-        if (comerciosData.length > 0) {
-          setComercios(comerciosData.slice(0, 4));
-        }
+        setComercios(comerciosData.length > 0 ? comerciosData : sampleComercios);
       } catch {
-        setComercios(featuredComercios);
+        setComercios(sampleComercios);
       } finally {
         setLoadingComercios(false);
       }
@@ -40,9 +39,7 @@ export default function Home() {
     const loadPublicaciones = async () => {
       try {
         const publicacionesData = await getLatestPublications(4);
-        if (publicacionesData.length > 0) {
-          setPublicaciones(publicacionesData);
-        }
+        setPublicaciones(publicacionesData.length > 0 ? publicacionesData : samplePublicaciones);
       } catch {
         setPublicaciones(samplePublicaciones);
       } finally {
@@ -55,15 +52,20 @@ export default function Home() {
   }, []);
 
   const visibleComercios = useMemo(() => {
+    const normalizedSearch = searchValue.toLowerCase().trim();
+
     return comercios.filter((comercio) => {
       const matchesCategory = selectedCategory === 'Todos' || comercio.categoria === selectedCategory;
-      const matchesSearch = [comercio.nombre, comercio.rubro, comercio.ciudad, comercio.categoria]
+      const matchesCity = cityMatches(comercio.ciudad, selectedCity);
+      const matchesSearch = [comercio.nombre, comercio.rubro, comercio.categoria, comercio.direccion]
         .join(' ')
         .toLowerCase()
-        .includes(searchValue.toLowerCase());
-      return matchesCategory && matchesSearch;
+        .includes(normalizedSearch);
+      return matchesCategory && matchesCity && matchesSearch;
     });
-  }, [comercios, searchValue, selectedCategory]);
+  }, [comercios, searchValue, selectedCategory, selectedCity]);
+
+  const cityOptions = useMemo(() => getCityOptions(comercios), [comercios]);
 
   const handleSearch = () => {
     const params = new URLSearchParams();
@@ -76,110 +78,127 @@ export default function Home() {
       params.set('category', selectedCategory);
     }
 
+    if (selectedCity !== 'Todas') {
+      params.set('city', selectedCity);
+    }
+
     const queryString = params.toString();
     router.push(`/comercios${queryString ? `?${queryString}` : ''}`);
   };
 
-  const handleSelectCategory = (category: string) => {
-    setSelectedCategory(category);
-    const params = new URLSearchParams();
-
-    if (category !== 'Todos') {
-      params.set('category', category);
-    }
-
-    router.push(`/comercios${params.toString() ? `?${params.toString()}` : ''}`);
-  };
-
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-50">
-      <div className="mx-auto max-w-6xl px-4 pb-32 pt-28 sm:px-6">
-        <HeroSection />
-
-        <section className="mt-6 rounded-[2rem] bg-slate-900/95 p-5 shadow-soft ring-1 ring-white/10 sm:p-6">
-          <SectionHeading
-            title="Guía inteligente de comercios locales"
-            description="Encuentra ofertas, horarios y comercios verificados con una experiencia móvil rápida e intuitiva."
-          />
-
-          <div className="mt-6 space-y-5">
-            <SearchBar
-              value={searchValue}
-              onChange={(event) => setSearchValue(event.target.value)}
-              onSubmit={handleSearch}
-              placeholder="Busca por comercio, categoría o ciudad"
-              buttonLabel="Ir"
-            />
-
-            <div className="space-y-4 rounded-[2rem] bg-slate-950/90 p-4 sm:p-5">
-              <p className="text-xs uppercase tracking-[0.3em] text-cyan-300/80">Categorías</p>
-              <CategoryPills
-                categories={categories}
-                selectedCategory={selectedCategory}
-                onSelectCategory={handleSelectCategory}
-              />
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Link href="/comercios" className="rounded-[2rem] bg-slate-950/90 p-5 text-left shadow-soft ring-1 ring-white/10 transition hover:bg-slate-900">
-                <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Explorar</p>
-                <h3 className="mt-3 text-xl font-semibold text-slate-50">Navega comercios por categoría</h3>
-                <p className="mt-3 text-sm text-slate-400">Descubre negocios locales, ofertas y servicios con un solo toque.</p>
-              </Link>
-              <Link href="/registro" className="rounded-[2rem] bg-cyan-500/95 p-5 text-left shadow-soft ring-1 ring-cyan-400/20 transition hover:bg-cyan-400">
-                <p className="text-xs uppercase tracking-[0.3em] text-slate-950/70">Vende aquí</p>
-                <h3 className="mt-3 text-xl font-semibold text-slate-950">Registra tu comercio</h3>
-                <p className="mt-3 text-sm text-slate-950/80">Publica tu negocio y llega a clientes móviles en pocos minutos.</p>
-              </Link>
+    <main className="min-h-screen bg-surface px-4 pb-28 pt-20 text-slate-950 sm:px-6">
+      <div className="mx-auto max-w-6xl space-y-6">
+        <section className="grid gap-4 pt-1 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
+          <div className="space-y-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.26em] text-accent">ComerciosPY</p>
+            <h1 className="max-w-3xl text-2xl font-semibold leading-tight sm:text-5xl">
+              Busca gratis negocios, servicios y contactos por ciudad.
+            </h1>
+            <p className="max-w-2xl text-sm leading-6 text-slate-600 sm:text-base">
+              No necesitas cuenta para encontrar comercios, profesionales o prestadores de servicios para viviendas y otros rubros.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {['Gratis', 'Sin registro', 'WhatsApp directo', 'Filtro por ciudad'].map((item) => (
+                <span key={item} className="rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-soft ring-1 ring-slate-200">
+                  {item}
+                </span>
+              ))}
             </div>
           </div>
-        </section>
 
-        <section className="mt-6 rounded-[2rem] bg-slate-900/90 p-5 shadow-soft ring-1 ring-white/10 sm:p-6">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Destacados</p>
-              <h2 className="mt-2 text-xl font-semibold">Comercios favoritos</h2>
+          <div className="hidden rounded-3xl border border-slate-200 bg-white p-4 shadow-glow lg:block">
+            <div className="flex items-start gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-red-50 text-accent">
+                <Search className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-slate-950">Acceso gratis para usuarios</p>
+                <p className="mt-1 text-sm leading-6 text-slate-600">Filtra por ciudad y categoria, abre WhatsApp, llama o mira la ubicacion sin registrarte.</p>
+              </div>
             </div>
             <Link
               href="/comercios"
-              className="rounded-full bg-cyan-500 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400"
+              className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-accent px-4 py-3 text-sm font-semibold text-white transition hover:bg-red-700"
             >
+              <Search className="h-4 w-4" />
+              Buscar gratis
+            </Link>
+            <Link href="/registro" className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+              <MessageCircle className="h-4 w-4" />
+              Soy comercio y quiero aparecer
+            </Link>
+          </div>
+        </section>
+
+        <section className="space-y-3">
+          <SearchBar
+            value={searchValue}
+            onChange={(event) => setSearchValue(event.target.value)}
+            onSubmit={handleSearch}
+            placeholder="Buscar negocio, rubro o direccion"
+            buttonLabel="Ir"
+          />
+          <div className="space-y-4 rounded-3xl border border-slate-200 bg-white p-4 shadow-soft">
+            <div>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Ciudad</p>
+              <CategoryPills categories={cityOptions} selectedCategory={selectedCity} onSelectCategory={setSelectedCity} />
+            </div>
+            <div>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Categoria de negocio</p>
+              <CategoryPills categories={categories} selectedCategory={selectedCategory} onSelectCategory={setSelectedCategory} />
+            </div>
+          </div>
+          <Link href="/registro" className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-soft lg:hidden">
+            <span>Soy comercio o prestador</span>
+            <span className="text-accent">Quiero aparecer</span>
+          </Link>
+        </section>
+
+        <section className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-xl font-semibold text-slate-950">Negocios disponibles</h2>
+              <p className="mt-1 text-sm text-slate-500">
+                {visibleComercios.length} resultados gratis{selectedCity !== 'Todas' ? ` en ${selectedCity}` : ''} para consultar ahora.
+              </p>
+            </div>
+            <Link href="/comercios" className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-soft transition hover:border-slate-300">
               Ver todos
             </Link>
           </div>
 
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <div className="space-y-3">
             {loadingComercios ? (
-              <p className="text-slate-400">Cargando comercios...</p>
+              <p className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-500 shadow-soft">Cargando comercios...</p>
             ) : visibleComercios.length > 0 ? (
-              visibleComercios.slice(0, 4).map((comercio) => <CommerceCard key={comercio.id} comercio={comercio} />)
+              visibleComercios.slice(0, 8).map((comercio) => <CommerceCard key={comercio.id} comercio={comercio} />)
             ) : (
-              <p className="text-slate-400">No se encontraron comercios que coincidan con tu búsqueda.</p>
+              <p className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-500 shadow-soft">No hay comercios que coincidan con tu busqueda.</p>
             )}
           </div>
         </section>
 
-        <section className="mt-6 rounded-[2rem] bg-slate-900/90 p-5 shadow-soft ring-1 ring-white/10 sm:p-6">
-          <div className="flex flex-wrap items-center justify-between gap-4">
+        <section className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Feed</p>
-              <h2 className="mt-2 text-xl font-semibold">Publicaciones recientes</h2>
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-accent" />
+                <h2 className="text-xl font-semibold text-slate-950">Publicaciones recientes</h2>
+              </div>
+              <p className="mt-1 text-sm text-slate-500">Ofertas, servicios y novedades cargadas por los comercios.</p>
             </div>
-            <Link
-              href="/publicar"
-              className="rounded-full bg-slate-800 px-4 py-2 text-sm text-slate-200 transition hover:bg-slate-700"
-            >
-              Publicar ahora
+            <Link href="/registro" className="inline-flex items-center gap-2 rounded-xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white shadow-soft transition hover:bg-slate-800">
+              Soy comercio
             </Link>
           </div>
-          <div className="mt-4 space-y-4">
+          <div className="grid gap-3 lg:grid-cols-3">
             {loadingPublicaciones ? (
-              <p className="text-slate-400">Cargando publicaciones...</p>
+              <p className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-500 shadow-soft">Cargando publicaciones...</p>
             ) : publicaciones.length > 0 ? (
-              publicaciones.map((publicacion) => <PublicacionCard key={publicacion.id} publicacion={publicacion} />)
+              publicaciones.slice(0, 3).map((publicacion) => <PublicacionCard key={publicacion.id} publicacion={publicacion} />)
             ) : (
-              <p className="text-slate-400">No hay publicaciones recientes.</p>
+              <p className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-500 shadow-soft">No hay publicaciones recientes.</p>
             )}
           </div>
         </section>

@@ -5,18 +5,20 @@ const config: Config = {
   theme: {
     extend: {
       boxShadow: {
-        soft: '0 18px 50px rgba(15, 23, 42, 0.08)',
-        glow: '0 0 0 1px rgba(255,255,255,0.08), 0 24px 80px rgba(15,23,42,0.12)'
+        soft: '0 18px 50px rgba(15, 23, 42, 0.06)',
+        glow: '0 0 0 1px rgba(15, 23, 42, 0.05), 0 24px 80px rgba(15, 23, 42, 0.08)'
       },
       colors: {
-        surface: '#0f172a',
-        surface2: '#111827',
-        accent: '#38bdf8',
-        accent2: '#8b5cf6',
-        muted: '#94a3b8'
+        surface: '#f8fafc',
+        surface2: '#f1f5f9',
+        card: '#ffffff',
+        accent: '#dc2626',
+        accent2: '#fda4af',
+        muted: '#64748b',
+        text: '#111827'
       },
       backgroundImage: {
-        'hero-gradient': 'radial-gradient(circle at top, rgba(56, 189, 248, 0.18), transparent 40%), linear-gradient(180deg, rgba(15,23,42,1), rgba(15,23,42,0.96))'
+        'hero-gradient': 'radial-gradient(circle at top, rgba(220, 38, 38, 0.1), transparent 40%), linear-gradient(180deg, #f8fafc, #eef2f7)'
       }
     }
   },

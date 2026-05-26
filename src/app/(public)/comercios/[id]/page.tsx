@@ -1,10 +1,14 @@
 "use client";
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { Clock, MapPin, MessageCircle, Phone, ShieldCheck } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { getComercioById, getPublicationsByCommerce } from '@/lib/firebase/firestore';
 import { PublicacionCard } from '@/components/publicaciones/publicacion-card';
+import { DigitalBusinessCard } from '@/components/comercios/digital-business-card';
+import { sampleComercios, samplePublicaciones } from '@/lib/mockData';
+import { buildMapsUrl, buildWhatsappUrl, cleanPhone } from '@/lib/utils/format';
 import type { Comercio, Publicacion } from '@/types';
 
 export default function ComercioDetailPage() {
@@ -20,15 +24,18 @@ export default function ComercioDetailPage() {
 
       try {
         const comercioItem = await getComercioById(commerceId);
-        setComercio(comercioItem);
+        const fallback = sampleComercios.find((item) => item.id === commerceId) ?? null;
+        const selectedCommerce = comercioItem ?? fallback;
+        setComercio(selectedCommerce);
 
-        if (comercioItem) {
-          const publicacionesData = await getPublicationsByCommerce(comercioItem.id);
-          setPublicaciones(publicacionesData);
+        if (selectedCommerce) {
+          const publicacionesData = await getPublicationsByCommerce(selectedCommerce.id);
+          setPublicaciones(publicacionesData.length > 0 ? publicacionesData : samplePublicaciones.filter((item) => item.comercioId === selectedCommerce.id));
         }
       } catch {
-        setComercio(null);
-        setPublicaciones([]);
+        const fallback = sampleComercios.find((item) => item.id === commerceId) ?? null;
+        setComercio(fallback);
+        setPublicaciones(samplePublicaciones.filter((item) => item.comercioId === commerceId));
       } finally {
         setLoading(false);
       }
@@ -37,87 +44,135 @@ export default function ComercioDetailPage() {
     loadCommerce();
   }, [commerceId]);
 
+  const gallery = useMemo(() => {
+    if (!comercio) return [];
+    return [comercio.portadaUrl, ...(comercio.fotos ?? [])].filter(Boolean).slice(0, 6);
+  }, [comercio]);
+
   if (loading) {
     return (
-      <main className="min-h-screen bg-slate-950 px-4 pb-28 pt-24 text-slate-50 sm:px-6">
-        <div className="mx-auto max-w-4xl py-24 text-center text-slate-400">Cargando comercio...</div>
+      <main className="min-h-screen bg-surface px-4 pb-28 pt-24 text-slate-950 sm:px-6">
+        <div className="mx-auto max-w-4xl py-24 text-center text-slate-500">Cargando comercio...</div>
       </main>
     );
   }
 
   if (!comercio) {
     return (
-      <main className="min-h-screen bg-slate-950 px-4 pb-28 pt-24 text-slate-50 sm:px-6">
-        <div className="mx-auto max-w-4xl py-24 text-center text-slate-400">No se encontró el comercio solicitado.</div>
+      <main className="min-h-screen bg-surface px-4 pb-28 pt-24 text-slate-950 sm:px-6">
+        <div className="mx-auto max-w-4xl py-24 text-center text-slate-500">No se encontro el comercio solicitado.</div>
       </main>
     );
   }
 
+  const telefono = comercio.telefono ?? comercio.whatsapp;
+  const telUrl = cleanPhone(telefono) ? `tel:${cleanPhone(telefono)}` : '#';
+  const whatsappUrl = buildWhatsappUrl(comercio.whatsapp, `Hola, vi ${comercio.nombre} en ComerciosPY y quiero consultar.`);
+  const mapsUrl = buildMapsUrl(comercio);
+
   return (
-    <main className="min-h-screen bg-slate-950 px-4 pb-28 pt-24 text-slate-50 sm:px-6">
-      <div className="mx-auto max-w-4xl space-y-6">
-        <section className="rounded-[2rem] bg-slate-900/95 p-4 shadow-soft ring-1 ring-white/10 sm:p-6">
-          <div className="relative overflow-hidden rounded-[2rem] bg-slate-800/90">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.2),_transparent_35%)]" />
-            <img src={comercio.portadaUrl} alt={comercio.nombre} className="h-56 w-full object-cover opacity-80" />
-            <div className="absolute inset-x-0 bottom-0 px-5 pb-5 text-slate-50">
+    <main className="min-h-screen bg-surface px-4 pb-28 pt-24 text-slate-950 sm:px-6">
+      <div className="mx-auto max-w-6xl space-y-6">
+        <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-glow">
+          <div className="relative min-h-[320px] bg-slate-100">
+            <img src={comercio.portadaUrl} alt={comercio.nombre} className="absolute inset-0 h-full w-full object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/20 to-transparent" />
+            <div className="absolute inset-x-0 bottom-0 p-5 text-white sm:p-8">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-full bg-cyan-500/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-cyan-200">
-                  {comercio.categoria}
-                </span>
-                <span className="rounded-full bg-slate-950/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-300">
-                  {comercio.rubro}
-                </span>
+                <span className="rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-slate-950">{comercio.categoria}</span>
+                <span className="rounded-full bg-slate-950/65 px-3 py-1 text-xs font-semibold text-white">{comercio.rubro}</span>
+                {comercio.verificado ? (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500 px-3 py-1 text-xs font-semibold text-white">
+                    <ShieldCheck className="h-3.5 w-3.5" />
+                    Verificado
+                  </span>
+                ) : null}
               </div>
-              <h1 className="mt-3 text-3xl font-semibold">{comercio.nombre}</h1>
-              <p className="mt-2 text-sm text-slate-200">{comercio.direccion} · {comercio.ciudad}</p>
+              <h1 className="mt-4 max-w-3xl text-4xl font-semibold leading-tight sm:text-5xl">{comercio.nombre}</h1>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-white/85">{comercio.resumen ?? comercio.descripcion}</p>
             </div>
           </div>
-          <div className="mt-5 grid gap-4 sm:grid-cols-[1.5fr_1fr]">
-            <div className="space-y-4 rounded-3xl bg-slate-950/90 p-4">
-              <div className="flex items-center gap-3">
-                <div className="h-14 w-14 overflow-hidden rounded-3xl bg-slate-700">
-                  <img src={comercio.logoUrl} alt={comercio.nombre} className="h-full w-full object-cover" />
-                </div>
+
+          <div className="grid gap-6 p-5 lg:grid-cols-[1fr_320px] lg:p-6">
+            <div className="order-2 space-y-6 lg:order-1">
+              <div>
+                <h2 className="text-xl font-semibold text-slate-950">Informacion</h2>
+                <p className="mt-3 text-sm leading-7 text-slate-600">{comercio.descripcion}</p>
+              </div>
+
+              {comercio.servicios?.length ? (
                 <div>
-                  <p className="text-sm uppercase tracking-[0.3em] text-cyan-300/80">Comercio</p>
-                  <p className="text-lg font-semibold text-slate-100">{comercio.nombre}</p>
+                  <h2 className="text-xl font-semibold text-slate-950">Servicios</h2>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {comercio.servicios.map((servicio) => (
+                      <span key={servicio} className="rounded-full bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-700">
+                        {servicio}
+                      </span>
+                    ))}
+                  </div>
                 </div>
-              </div>
-              <p className="text-sm leading-6 text-slate-300">{comercio.descripcion}</p>
-              <div className="grid gap-2 text-sm text-slate-400 sm:grid-cols-2">
-                <div className="rounded-3xl bg-slate-900/90 p-3">Horario: {comercio.horario}</div>
-                <div className="rounded-3xl bg-slate-900/90 p-3">Verificado: {comercio.verificado ? 'Sí' : 'Pendiente'}</div>
-              </div>
+              ) : null}
+
+              {gallery.length ? (
+                <div>
+                  <h2 className="text-xl font-semibold text-slate-950">Fotos</h2>
+                  <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-6">
+                    {gallery.map((image, index) => (
+                      <div key={`${image}-${index}`} className="aspect-square overflow-hidden rounded-2xl bg-slate-100">
+                        <img src={image} alt={`${comercio.nombre} foto ${index + 1}`} className="h-full w-full object-cover" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
             </div>
-            <div className="space-y-3 rounded-3xl bg-slate-950/90 p-4 text-sm text-slate-300">
-              <p className="text-slate-100">Contacto rápido</p>
-              <div className="space-y-3">
-                <p>WhatsApp</p>
-                <a href={`https://wa.me/${comercio.whatsapp.replace(/[^0-9]/g, '')}`} target="_blank" rel="noreferrer" className="block rounded-3xl bg-cyan-500 px-4 py-3 text-center font-semibold text-slate-950 transition hover:bg-cyan-400">
-                  Chatear por WhatsApp
-                </a>
-                <p className="text-xs text-slate-500">Haz click para abrir en el celular.</p>
+
+            <aside className="order-1 space-y-3 lg:order-2">
+              <DigitalBusinessCard comercio={comercio} compact />
+              <a href={whatsappUrl} target="_blank" rel="noreferrer" className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700">
+                <MessageCircle className="h-4 w-4" />
+                Conversar por WhatsApp
+              </a>
+              <a href={telUrl} className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800 transition hover:bg-slate-50">
+                <Phone className="h-4 w-4" />
+                {telefono ?? 'Llamar'}
+              </a>
+              <a href={mapsUrl} target="_blank" rel="noreferrer" className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800">
+                <MapPin className="h-4 w-4" />
+                Ver ubicacion
+              </a>
+
+              <div className="rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-600">
+                <p className="font-semibold text-slate-950">Direccion</p>
+                <p>{comercio.direccion}</p>
+                <p>{comercio.ciudad}</p>
               </div>
-            </div>
+              <div className="rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-600">
+                <p className="flex items-center gap-2 font-semibold text-slate-950">
+                  <Clock className="h-4 w-4" />
+                  Horario
+                </p>
+                <p className="mt-1">{comercio.horario}</p>
+              </div>
+            </aside>
           </div>
         </section>
 
-        <section className="rounded-[2rem] bg-slate-900/95 p-5 shadow-soft ring-1 ring-white/10 sm:p-6">
-          <div className="flex items-center justify-between gap-4">
+        <section className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Publicaciones</p>
-              <h2 className="mt-2 text-xl font-semibold">Promociones y novedades</h2>
+              <h2 className="text-xl font-semibold text-slate-950">Publicaciones</h2>
+              <p className="mt-1 text-sm text-slate-500">Promociones, novedades y servicios cargados por el comercio.</p>
             </div>
-            <Link href="/publicar" className="rounded-full bg-slate-800 px-4 py-2 text-sm text-slate-200 transition hover:bg-slate-700">
-              Crear publicación
+            <Link href="/publicar" className="inline-flex items-center justify-center rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700">
+              Crear publicacion
             </Link>
           </div>
-          <div className="mt-4 space-y-4">
+          <div className="grid gap-3 lg:grid-cols-3">
             {publicaciones.length > 0 ? (
               publicaciones.map((publicacion) => <PublicacionCard key={publicacion.id} publicacion={publicacion} />)
             ) : (
-              <div className="rounded-3xl bg-slate-950/90 p-4 text-center text-sm text-slate-400">No hay publicaciones para este comercio aún.</div>
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 text-center text-sm text-slate-500 shadow-soft">No hay publicaciones para este comercio aun.</div>
             )}
           </div>
         </section>

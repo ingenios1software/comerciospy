@@ -1,8 +1,11 @@
 "use client";
 
 import Link from 'next/link';
+import { LogOut, MessageCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/firebase/auth-context';
+import { adminContactMessage, adminWhatsapp } from '@/lib/admin-contact';
+import { buildWhatsappUrl } from '@/lib/utils/format';
 
 export function Navbar() {
   const { user, loading, logout } = useAuth();
@@ -18,24 +21,24 @@ export function Navbar() {
     : user
     ? [
         { label: 'Inicio', href: '/' },
-        { label: 'Comercios', href: '/comercios' },
-        { label: 'Dashboard', href: '/dashboard' }
+        { label: 'Guia', href: '/comercios' },
+        { label: 'Panel', href: '/dashboard' }
       ]
     : [
         { label: 'Inicio', href: '/' },
-        { label: 'Comercios', href: '/comercios' },
-        { label: 'Login', href: '/login' }
+        { label: 'Buscar gratis', href: '/comercios' },
+        { label: 'Panel comercio', href: '/login' }
       ];
 
   return (
-    <nav className="fixed inset-x-0 top-0 z-20 border-b border-slate-800/70 bg-slate-950/95 backdrop-blur-xl">
+    <nav className="fixed inset-x-0 top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur-xl">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
-        <Link href="/" className="text-lg font-semibold text-slate-50">
+        <Link href="/" className="text-lg font-semibold text-slate-950">
           ComerciosPY
         </Link>
-        <div className="hidden items-center gap-3 sm:flex">
+        <div className="hidden items-center gap-2 sm:flex">
           {navItems.map((item) => (
-            <Link key={item.href} href={item.href} className="rounded-full px-3 py-2 text-sm text-slate-300 transition hover:bg-slate-800 hover:text-white">
+            <Link key={item.href} href={item.href} className="rounded-xl px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-950">
               {item.label}
             </Link>
           ))}
@@ -43,11 +46,22 @@ export function Navbar() {
             <button
               type="button"
               onClick={handleLogout}
-              className="rounded-full bg-slate-800 px-3 py-2 text-sm font-semibold text-slate-200 transition hover:bg-slate-700"
+              className="inline-flex items-center gap-2 rounded-xl bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-200"
             >
-              Cerrar sesión
+              <LogOut className="h-4 w-4" />
+              Salir
             </button>
-          ) : null}
+          ) : (
+            <a
+              href={buildWhatsappUrl(adminWhatsapp, adminContactMessage)}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700"
+            >
+              <MessageCircle className="h-4 w-4" />
+              Quiero aparecer
+            </a>
+          )}
         </div>
       </div>
     </nav>

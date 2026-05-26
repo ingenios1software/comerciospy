@@ -6,13 +6,13 @@ import { BottomNavigation } from '@/components/layout/bottom-navigation';
 
 export const metadata: Metadata = {
   title: 'ComerciosPY',
-  description: 'Marketplace móvil para comercios y publicaciones locales.'
+  description: 'Guia moderna de comercios, servicios y contactos locales por WhatsApp.'
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es" suppressHydrationWarning>
-      <body className="min-h-screen bg-slate-950 text-slate-50 antialiased">
+      <body className="min-h-screen bg-surface text-slate-950 antialiased">
         <AuthProvider>
           <Navbar />
           {children}

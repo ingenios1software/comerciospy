@@ -10,6 +10,10 @@ export const categories: Category[] = [
   { id: 'Moda', label: 'Moda' },
   { id: 'Bienestar', label: 'Bienestar' },
   { id: 'Servicios', label: 'Servicios' },
-  { id: 'Tecnología', label: 'Tecnología' },
-  { id: 'Panadería', label: 'Panadería' }
+  { id: 'Vivienda', label: 'Vivienda' },
+  { id: 'Electricidad', label: 'Electricidad' },
+  { id: 'Plomeria', label: 'Plomeria' },
+  { id: 'Tecnologia', label: 'Tecnologia' },
+  { id: 'Hogar', label: 'Hogar' },
+  { id: 'Autos', label: 'Autos' }
 ];

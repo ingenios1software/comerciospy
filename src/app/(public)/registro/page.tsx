@@ -1,244 +1,82 @@
 "use client";
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { FormEvent, useState } from 'react';
-import { createCommerce, createUserProfile } from '@/lib/firebase/firestore';
-import { registerUser } from '@/lib/firebase/auth';
+import { CheckCircle2, MessageCircle, ShieldCheck } from 'lucide-react';
+import { adminContactMessage, adminWhatsapp } from '@/lib/admin-contact';
+import { buildWhatsappUrl } from '@/lib/utils/format';
+
+const steps = [
+  'Te escriben por WhatsApp con los datos del negocio.',
+  'Vos confirmas el plan, el pago y el contenido inicial.',
+  'Creas su usuario y el comercio empieza a cargar publicaciones.'
+];
 
 export default function RegistroPage() {
-  const router = useRouter();
-  const [ownerName, setOwnerName] = useState('');
-  const [businessName, setBusinessName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [rubro, setRubro] = useState('');
-  const [categoria, setCategoria] = useState('Servicios');
-  const [ciudad, setCiudad] = useState('');
-  const [direccion, setDireccion] = useState('');
-  const [whatsapp, setWhatsapp] = useState('');
-  const [descripcion, setDescripcion] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setError(null);
-    setLoading(true);
-
-    try {
-      const userCredential = await registerUser(email, password);
-      const commerceId = userCredential.user.uid;
-
-      await createUserProfile({
-        id: commerceId,
-        nombre: ownerName,
-        email,
-        rol: 'comercio',
-        comercioId: commerceId,
-        activo: true,
-        creadoEn: new Date().toISOString()
-      });
-
-      await createCommerce({
-        id: commerceId,
-        nombre: businessName,
-        rubro,
-        categoria,
-        descripcion,
-        ciudad,
-        direccion,
-        whatsapp,
-        logoUrl: 'https://images.unsplash.com/photo-1523475496153-3d6ccf030a5f?auto=format&fit=crop&w=200&q=60',
-        portadaUrl: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=1200&q=60',
-        horario: '09:00 - 21:00',
-        ubicacion: { lat: -34.6037, lng: -58.3816 },
-        activo: true,
-        verificado: false,
-        creadoEn: new Date().toISOString()
-      });
-
-      router.push('/dashboard');
-    } catch (err) {
-      setError('No se pudo crear la cuenta. Revisa los datos e intenta nuevamente.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const whatsappUrl = buildWhatsappUrl(adminWhatsapp, adminContactMessage);
 
   return (
-    <main className="min-h-screen bg-slate-950 px-4 py-8 text-slate-50 sm:px-6">
-      <div className="mx-auto max-w-2xl space-y-6 rounded-[2rem] bg-slate-900/95 p-6 shadow-soft ring-1 ring-white/10">
-        <div className="space-y-2 text-center">
-          <p className="text-xs uppercase tracking-[0.3em] text-cyan-300/80">Registro de comercio</p>
-          <h1 className="text-3xl font-semibold">Lleva tu negocio al móvil</h1>
-          <p className="text-sm text-slate-400">Crea tu cuenta y registra tu comercio en un solo paso.</p>
-        </div>
+    <main className="min-h-screen bg-surface px-4 pb-28 pt-24 text-slate-950 sm:px-6">
+      <div className="mx-auto grid max-w-5xl gap-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-start">
+        <section className="space-y-6">
+          <div className="space-y-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.26em] text-accent">Alta administrada</p>
+            <h1 className="max-w-2xl text-4xl font-semibold leading-tight sm:text-5xl">
+              Aparece en ComerciosPY con una ficha profesional y editable.
+            </h1>
+            <p className="max-w-xl text-base leading-7 text-slate-600">
+              El registro no es automatico. Primero conversamos, confirmamos el plan y despues se crea el acceso para que cada comercio administre su contenido.
+            </p>
+          </div>
 
-        <form className="space-y-4" onSubmit={handleSubmit}>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label htmlFor="ownerName" className="mb-2 block text-sm font-medium text-slate-200">
-                Nombre del responsable
-              </label>
-              <input
-                id="ownerName"
-                value={ownerName}
-                onChange={(event) => setOwnerName(event.target.value)}
-                placeholder="Tu nombre"
-                className="w-full rounded-3xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
-                required
-              />
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <a
+              href={whatsappUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-accent px-5 py-3 text-sm font-semibold text-white shadow-soft transition hover:bg-red-700"
+            >
+              <MessageCircle className="h-4 w-4" />
+              Quiero aparecer
+            </a>
+            <Link
+              href="/comercios"
+              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-800 shadow-soft transition hover:border-slate-300"
+            >
+              Ver guia
+            </Link>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-3">
+            {steps.map((step) => (
+              <div key={step} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-soft">
+                <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                <p className="mt-3 text-sm leading-6 text-slate-700">{step}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <aside className="rounded-3xl border border-slate-200 bg-white p-5 shadow-glow">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-red-50 text-accent">
+              <ShieldCheck className="h-5 w-5" />
             </div>
             <div>
-              <label htmlFor="businessName" className="mb-2 block text-sm font-medium text-slate-200">
-                Nombre del comercio
-              </label>
-              <input
-                id="businessName"
-                value={businessName}
-                onChange={(event) => setBusinessName(event.target.value)}
-                placeholder="Tu comercio"
-                className="w-full rounded-3xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
-                required
-              />
+              <p className="text-sm font-semibold text-slate-950">Control comercial</p>
+              <p className="text-xs text-slate-500">Vos decidis quien entra.</p>
             </div>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label htmlFor="email" className="mb-2 block text-sm font-medium text-slate-200">
-                Email
-              </label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                placeholder="ejemplo@correo.com"
-                className="w-full rounded-3xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
-                required
-              />
-            </div>
-            <div>
-              <label htmlFor="password" className="mb-2 block text-sm font-medium text-slate-200">
-                Contraseña
-              </label>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                placeholder="Mínimo 8 caracteres"
-                className="w-full rounded-3xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
-                required
-              />
-            </div>
+          <div className="mt-5 space-y-4 text-sm leading-6 text-slate-600">
+            <p>Este flujo evita cuentas falsas, mantiene la calidad de la guia y te permite vender el alta antes de activar el panel.</p>
+            <p>Cuando el comercio ya esta activo, puede entrar con su usuario para cargar fotos, publicaciones, servicios y descripciones con ayuda de IA.</p>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label htmlFor="rubro" className="mb-2 block text-sm font-medium text-slate-200">
-                Rubro
-              </label>
-              <input
-                id="rubro"
-                value={rubro}
-                onChange={(event) => setRubro(event.target.value)}
-                placeholder="Ej. Cafetería, Peluquería"
-                className="w-full rounded-3xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
-                required
-              />
-            </div>
-            <div>
-              <label htmlFor="categoria" className="mb-2 block text-sm font-medium text-slate-200">
-                Categoría
-              </label>
-              <input
-                id="categoria"
-                value={categoria}
-                onChange={(event) => setCategoria(event.target.value)}
-                placeholder="Ej. Servicios, Moda"
-                className="w-full rounded-3xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
-                required
-              />
-            </div>
+          <div className="mt-5 rounded-2xl bg-slate-50 p-4 text-sm text-slate-700">
+            <p className="font-semibold text-slate-950">WhatsApp de altas</p>
+            <p className="mt-1">{adminWhatsapp}</p>
           </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label htmlFor="ciudad" className="mb-2 block text-sm font-medium text-slate-200">
-                Ciudad
-              </label>
-              <input
-                id="ciudad"
-                value={ciudad}
-                onChange={(event) => setCiudad(event.target.value)}
-                placeholder="Ciudad"
-                className="w-full rounded-3xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
-                required
-              />
-            </div>
-            <div>
-              <label htmlFor="direccion" className="mb-2 block text-sm font-medium text-slate-200">
-                Dirección
-              </label>
-              <input
-                id="direccion"
-                value={direccion}
-                onChange={(event) => setDireccion(event.target.value)}
-                placeholder="Calle y número"
-                className="w-full rounded-3xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
-                required
-              />
-            </div>
-          </div>
-
-          <div>
-            <label htmlFor="whatsapp" className="mb-2 block text-sm font-medium text-slate-200">
-              WhatsApp
-            </label>
-            <input
-              id="whatsapp"
-              value={whatsapp}
-              onChange={(event) => setWhatsapp(event.target.value)}
-              placeholder="5493412345678"
-              className="w-full rounded-3xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
-              required
-            />
-          </div>
-
-          <div>
-            <label htmlFor="descripcion" className="mb-2 block text-sm font-medium text-slate-200">
-              Descripción del comercio
-            </label>
-            <textarea
-              id="descripcion"
-              value={descripcion}
-              onChange={(event) => setDescripcion(event.target.value)}
-              rows={4}
-              placeholder="Describe brevemente tu comercio"
-              className="w-full rounded-3xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
-              required
-            />
-          </div>
-
-          {error ? <p className="rounded-3xl bg-rose-500/10 p-3 text-sm text-rose-200">{error}</p> : null}
-          <button
-            type="submit"
-            className="w-full rounded-3xl bg-cyan-500 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-70"
-            disabled={loading}
-          >
-            {loading ? 'Registrando comercio...' : 'Registrar comercio'}
-          </button>
-        </form>
-
-        <p className="text-center text-sm text-slate-400">
-          ¿Ya tienes cuenta?{' '}
-          <Link href="/login" className="font-semibold text-cyan-300 hover:text-cyan-200">
-            Inicia sesión
-          </Link>
-        </p>
+        </aside>
       </div>
     </main>
   );

@@ -1,36 +1,60 @@
 # ComerciosPY
 
-Aplicación web móvil para comercios locales construida con Next.js App Router, TypeScript, Tailwind CSS y Firebase preparado para integrar Auth, Firestore y Storage.
+Guia web mobile-first para comercios locales y prestadores de servicios. El usuario comun busca gratis sin cuenta: filtra por ciudad, categoria y rubro, ve telefono, WhatsApp, ubicacion, horario, fotos y fichas completas. El alta no es libre para comercios: el negocio contacta por WhatsApp, paga, y administracion crea su usuario.
 
 ## Ejecutar localmente
 
-1. Instala dependencias:
+1. Instalar dependencias:
+
    ```bash
    npm install
    ```
-2. Crea un archivo `.env.local` basado en `.env.example`.
-3. Inicia la app:
+
+2. Crear `.env.local` basado en `.env.example`.
+
+3. Iniciar la app:
+
    ```bash
    npm run dev
    ```
-4. Abre `http://localhost:3000`
 
-## Estructura principal
+4. Abrir `http://localhost:3000`.
 
-- `src/app/(public)/` - páginas públicas y de acceso
-- `src/app/(dashboard)/` - dashboard y gestión de publicaciones
-- `src/components/` - componentes reutilizables
-- `src/lib/firebase/` - configuración modular de Firebase
-- `src/types/` - tipos TypeScript de la aplicación
+Antes de desplegar:
 
-## Configurar Firebase
+```bash
+npm run build
+```
 
-Actualiza `.env.local` con tus credenciales de Firebase, luego configura Authentication, Firestore y Storage en la consola de Firebase.
+## Variables
 
-## Siguientes pasos
+- `NEXT_PUBLIC_FIREBASE_*`: credenciales web de Firebase.
+- `NEXT_PUBLIC_ADMIN_WHATSAPP`: numero para solicitudes de alta.
+- `OPENAI_API_KEY`: clave server-side para el asistente IA de publicaciones.
+- `OPENAI_MODEL`: modelo para analizar fotos, por defecto `gpt-5-mini`.
 
-- Conectar Firebase Auth a los formularios de login/registro
-- Guardar comercios y publicaciones en Firestore
-- Subir fotos desde el celular a Firebase Storage
-- Añadir geolocalización y mapa interactivo
-- Hacer la UX completamente mobile-first con interacciones táctiles
+## Flujo del producto
+
+- `/`: busqueda gratis para usuarios, con filtro exacto por ciudad, categorias y comercios destacados.
+- `/comercios`: listado gratis sin cuenta, con ciudad precisa, categoria de negocio, llamada, WhatsApp, horario y ubicacion.
+- `/comercios/[id]`: ficha completa del negocio con galeria y publicaciones.
+- `/registro`: contacto comercial por WhatsApp para solicitar alta.
+- `/login`: acceso privado para usuarios ya creados.
+- `/dashboard`: panel del comercio.
+- `/perfil`: edicion de ficha publica, fotos y servicios.
+- `/publicar`: carga de publicaciones con asistente IA desde una foto.
+- Cada ficha publica funciona como tarjeta digital: se puede copiar, abrir, compartir por WhatsApp o usar el share nativo del celular.
+
+## Firebase
+
+En Firebase Console:
+
+1. Authentication: habilitar email/password.
+2. Firestore: aplicar `firestore.rules`.
+3. Storage: aplicar `storage.rules`.
+
+El administrador debe crear el usuario del comercio, crear o vincular el documento del comercio y asignar `comercioId` en el perfil del usuario. Los visitantes que solo buscan comercios no necesitan usuario.
+
+## IA
+
+El endpoint `POST /api/ai/publicacion` recibe una imagen desde el formulario de publicar y devuelve sugerencias de titulo, descripcion, categoria, tipo, ideas y mejoras de foto. La clave `OPENAI_API_KEY` nunca se expone al navegador.

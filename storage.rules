@@ -1,0 +1,43 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.rol in ['admin', 'superadmin'];
+    }
+
+    function isOwnerRequest() {
+      return isAuthenticated() && request.resource != null && request.resource.metadata.owner == request.auth.uid;
+    }
+
+    function isOwnerResource() {
+      return isAuthenticated() && resource != null && resource.metadata.owner == request.auth.uid;
+    }
+
+    function isValidImage() {
+      return request.resource != null
+        && request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+
+    match /publicaciones/{publicationId} {
+      allow read: if true;
+      allow create, update: if isValidImage() && (isOwnerRequest() || isAdmin());
+      allow delete: if isOwnerResource() || isAdmin();
+    }
+
+    match /comercios/{commerceId}/{allPaths=**} {
+      allow read: if true;
+      allow create, update: if isValidImage() && (isOwnerRequest() || isAdmin());
+      allow delete: if isOwnerResource() || isAdmin();
+    }
+
+    match /{allPaths=**} {
+      allow read: if true;
+      allow write: if false;
+    }
+  }
+}

@@ -5,7 +5,7 @@ import type { ReactNode } from 'react';
 import type { User } from 'firebase/auth';
 import { onAuthStateChanged } from 'firebase/auth';
 import { getAuthInstance, logoutUser } from './auth';
-import { getUserProfile } from './firestore';
+import { createUserProfile, getUserProfile } from './firestore';
 import type { UsuarioApp } from '@/types';
 
 type AuthContextType = {
@@ -27,14 +27,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
 
-      if (currentUser) {
-        const profileData = await getUserProfile(currentUser.uid);
-        setProfile(profileData);
-      } else {
-        setProfile(null);
-      }
+      try {
+        if (currentUser) {
+          const profileData = await getUserProfile(currentUser.uid);
 
-      setLoading(false);
+          if (profileData) {
+            setProfile(profileData);
+          } else if (currentUser.providerData.some((provider) => provider.providerId === 'google.com')) {
+            const newProfile: UsuarioApp = {
+              id: currentUser.uid,
+              nombre: currentUser.displayName ?? currentUser.email?.split('@')[0] ?? 'Usuario',
+              email: currentUser.email ?? '',
+              rol: 'usuario',
+              activo: true,
+              creadoEn: new Date().toISOString()
+            };
+
+            await createUserProfile(newProfile);
+            setProfile(newProfile);
+          } else {
+            setProfile(null);
+          }
+        } else {
+          setProfile(null);
+        }
+      } catch {
+        setProfile(null);
+      } finally {
+        setLoading(false);
+      }
     });
 
     return unsubscribe;

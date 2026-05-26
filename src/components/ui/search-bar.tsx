@@ -1,4 +1,5 @@
 import type React from 'react';
+import { Search } from 'lucide-react';
 
 type SearchBarProps = {
   value?: string;
@@ -21,21 +22,24 @@ export function SearchBar({
         event.preventDefault();
         onSubmit?.();
       }}
-      className="rounded-3xl border border-slate-800/80 bg-slate-950/95 p-4 shadow-soft"
+      className="rounded-2xl border border-slate-200 bg-white p-2 shadow-soft"
     >
       <label htmlFor="search" className="sr-only">Buscar comercios</label>
-      <div className="flex items-center gap-3">
-        <input
-          id="search"
-          type="search"
-          value={value}
-          onChange={onChange}
-          placeholder={placeholder}
-          className="w-full rounded-3xl border border-slate-800 bg-slate-900/95 px-4 py-3 text-sm text-slate-100 placeholder:text-slate-500 outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
-        />
+      <div className="flex items-center gap-2">
+        <div className="flex min-w-0 flex-1 items-center gap-2 rounded-xl bg-slate-50 px-3">
+          <Search className="h-4 w-4 shrink-0 text-slate-400" />
+          <input
+            id="search"
+            type="search"
+            value={value}
+            onChange={onChange}
+            placeholder={placeholder}
+            className="h-11 w-full bg-transparent text-sm text-slate-950 placeholder:text-slate-400 outline-none"
+          />
+        </div>
         <button
           type="submit"
-          className="inline-flex h-12 min-h-[3rem] items-center justify-center rounded-full bg-cyan-500 px-4 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400"
+          className="inline-flex h-11 min-w-[76px] items-center justify-center rounded-xl bg-accent px-4 text-sm font-semibold text-white transition hover:bg-red-700"
         >
           {buttonLabel}
         </button>
