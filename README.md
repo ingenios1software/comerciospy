@@ -35,6 +35,25 @@ La rama de produccion debe ser `main`. Cada push o merge a `main` dispara un nue
 
 No se usa Firebase Hosting y no hace falta agregar `vercel.json` para este flujo.
 
+## PWA instalable
+
+ComerciosPY esta configurada como PWA para Chrome Android y Edge/Chromium en PC:
+
+- Manifest App Router en `src/app/manifest.json`.
+- Service worker en `public/sw.js`.
+- Iconos PWA en `public/icons/`, incluyendo variantes `maskable`.
+- Boton `Instalar aplicación` visible cuando el navegador emite `beforeinstallprompt`.
+- Modo instalado `standalone`, con theme color rojo y splash blanco/rojo generado desde el manifest.
+
+Para probar la instalacion, desplegar en Vercel o ejecutar una build local de produccion:
+
+```bash
+npm run build
+npm run start
+```
+
+En desarrollo (`npm run dev`) el service worker no se registra para evitar cache de trabajo local.
+
 ## Variables de entorno
 
 Variables requeridas en Vercel:

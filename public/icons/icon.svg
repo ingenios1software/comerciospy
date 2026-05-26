@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="ComerciosPY">
+  <rect width="512" height="512" rx="112" fill="#ffffff"/>
+  <rect x="48" y="48" width="416" height="416" rx="96" fill="#b91c1c"/>
+  <path d="M142 214c0-56 45-101 101-101h126v86H245c-9 0-16 7-16 16v83c0 9 7 16 16 16h124v86H243c-56 0-101-45-101-101v-85Z" fill="#ffffff"/>
+  <path d="M280 227h89v62h-89z" fill="#ffffff" opacity=".92"/>
+</svg>
