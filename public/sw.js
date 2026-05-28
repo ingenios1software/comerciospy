@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'comerciospy-pwa-v1';
+const CACHE_VERSION = 'comerciospy-pwa-v20260528-1';
 const APP_CACHE = `${CACHE_VERSION}-app`;
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const APP_SHELL = [
@@ -29,12 +29,18 @@ self.addEventListener('activate', (event) => {
       .then((cacheNames) =>
         Promise.all(
           cacheNames
-            .filter((cacheName) => !cacheName.startsWith(CACHE_VERSION))
+            .filter((cacheName) => cacheName.startsWith('comerciospy-pwa-') && !cacheName.startsWith(CACHE_VERSION))
             .map((cacheName) => caches.delete(cacheName))
         )
       )
       .then(() => self.clients.claim())
   );
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
 
 async function cacheFirst(request) {
@@ -90,6 +96,11 @@ self.addEventListener('fetch', (event) => {
   if (url.searchParams.has('_rsc')) return;
 
   if (request.mode === 'navigate') {
+    if (url.pathname === '/login' || url.pathname.startsWith('/dashboard') || url.pathname.startsWith('/perfil') || url.pathname.startsWith('/publicar')) {
+      event.respondWith(fetch(request).catch(() => caches.match('/')));
+      return;
+    }
+
     event.respondWith(networkFirst(request));
     return;
   }

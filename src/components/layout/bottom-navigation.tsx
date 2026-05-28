@@ -1,16 +1,23 @@
 "use client";
 
 import Link from 'next/link';
-import { Home, List, PlusCircle, Store, User } from 'lucide-react';
+import { Home, List, PlusCircle, Store, User, Users } from 'lucide-react';
 import { useAuth } from '@/lib/firebase/auth-context';
 
 export function BottomNavigation() {
-  const { user, loading } = useAuth();
+  const { user, profile, loading } = useAuth();
 
   const items = loading
     ? [
         { label: 'Inicio', href: '/', icon: Home },
         { label: 'Guia', href: '/comercios', icon: List }
+      ]
+    : user && profile?.rol === 'superadmin'
+    ? [
+        { label: 'Inicio', href: '/', icon: Home },
+        { label: 'Guia', href: '/comercios', icon: List },
+        { label: 'Usuarios', href: '/admin/usuarios', icon: Users },
+        { label: 'Panel', href: '/dashboard', icon: User }
       ]
     : user
     ? [

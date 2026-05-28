@@ -1,7 +1,7 @@
 "use client";
 
 import Link from 'next/link';
-import { LayoutDashboard, LogOut, Map, PlusCircle, Store, User } from 'lucide-react';
+import { LayoutDashboard, LogOut, Map, PlusCircle, Store, User, Users } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/firebase/auth-context';
 
@@ -11,6 +11,8 @@ const sidebarItems = [
   { label: 'Mi comercio', href: '/perfil', icon: Store },
   { label: 'Mapa', href: '/mapa', icon: Map }
 ];
+
+const adminSidebarItems = [{ label: 'Usuarios', href: '/admin/usuarios', icon: Users }];
 
 export function Sidebar() {
   const { user, profile, loading, logout } = useAuth();
@@ -37,7 +39,7 @@ export function Sidebar() {
           ) : null}
         </div>
         <nav className="space-y-2">
-          {sidebarItems.map((item) => {
+          {[...sidebarItems, ...(profile?.rol === 'superadmin' ? adminSidebarItems : [])].map((item) => {
             const Icon = item.icon;
             return (
               <Link key={item.href} href={item.href} className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-950">

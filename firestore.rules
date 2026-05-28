@@ -43,7 +43,7 @@ service cloud.firestore {
     }
 
     match /comercios/{comercioId} {
-      allow read: if resource.data.activo == true;
+      allow read: if resource.data.activo == true || isComercioOwner(comercioId) || isAdmin();
       allow create: if isComercioOwner(comercioId) || isSuperAdmin();
       allow update, delete: if isComercioOwner(comercioId) || isAdmin();
     }

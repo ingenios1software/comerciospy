@@ -10,6 +10,59 @@ import { uploadFile } from '@/lib/firebase/storage';
 import { categories } from '@/lib/categories';
 import type { Comercio } from '@/types';
 
+const requiredProfileFields: Array<{ label: string; value: (data: ProfileFormData) => string }> = [
+  { label: 'Nombre del negocio', value: (data) => data.nombre },
+  { label: 'Rubro', value: (data) => data.rubro },
+  { label: 'Categoria', value: (data) => data.categoria },
+  { label: 'Horario', value: (data) => data.horario },
+  { label: 'WhatsApp', value: (data) => data.whatsapp },
+  { label: 'Ciudad', value: (data) => data.ciudad },
+  { label: 'Direccion', value: (data) => data.direccion },
+  { label: 'Descripcion', value: (data) => data.descripcion }
+];
+
+type ProfileFormData = {
+  nombre: string;
+  rubro: string;
+  categoria: string;
+  descripcion: string;
+  resumen: string;
+  ciudad: string;
+  direccion: string;
+  telefono: string;
+  whatsapp: string;
+  horario: string;
+  ubicacionUrl: string;
+  servicios: string;
+};
+
+function clean(value: string) {
+  return value.trim();
+}
+
+function getFirebaseSaveMessage(error: unknown) {
+  const code = typeof error === 'object' && error !== null && 'code' in error ? String(error.code) : '';
+  const message = error instanceof Error ? error.message : '';
+
+  if (code.includes('permission-denied') || code === 'storage/unauthorized') {
+    return 'No tenes permisos para guardar esta ficha. Revisa que las reglas de Firestore/Storage esten publicadas y que tu usuario tenga rol comercio con su comercioId correcto.';
+  }
+
+  if (code === 'storage/quota-exceeded') {
+    return 'No se pudo subir la imagen porque el Storage supero la cuota disponible.';
+  }
+
+  if (code === 'storage/retry-limit-exceeded') {
+    return 'No se pudo subir la imagen por conexion inestable. Intenta nuevamente.';
+  }
+
+  if (message) {
+    return message;
+  }
+
+  return 'No se pudo guardar la ficha. Revisa los datos e intenta nuevamente.';
+}
+
 export default function PerfilPage() {
   const { user, profile, loading } = useAuth();
   const categoryOptions = categories.filter((category) => category.id !== 'Todos');
@@ -76,6 +129,31 @@ export default function PerfilPage() {
       return;
     }
 
+    const formData: ProfileFormData = {
+      nombre: clean(nombre),
+      rubro: clean(rubro),
+      categoria: clean(categoria),
+      descripcion: clean(descripcion),
+      resumen: clean(resumen),
+      ciudad: clean(ciudad),
+      direccion: clean(direccion),
+      telefono: clean(telefono),
+      whatsapp: clean(whatsapp),
+      horario: clean(horario),
+      ubicacionUrl: clean(ubicacionUrl),
+      servicios
+    };
+
+    const missingFields = requiredProfileFields
+      .filter((field) => !field.value(formData))
+      .map((field) => field.label);
+
+    if (missingFields.length > 0) {
+      setError(`Falta completar: ${missingFields.join(', ')}.`);
+      setSaving(false);
+      return;
+    }
+
     try {
       const uploads: Partial<Comercio> = {};
       if (logoFile) uploads.logoUrl = await uploadFile(`comercios/${comercioId}/logo-${Date.now()}`, logoFile);
@@ -92,19 +170,19 @@ export default function PerfilPage() {
       const payload: Partial<Comercio> = {
         ...uploads,
         ownerId: user.uid,
-        nombre,
-        rubro,
-        categoria,
-        descripcion,
-        resumen,
-        ciudad,
-        direccion,
-        telefono,
-        whatsapp,
-        horario,
-        ubicacionUrl,
+        nombre: formData.nombre,
+        rubro: formData.rubro,
+        categoria: formData.categoria,
+        descripcion: formData.descripcion,
+        resumen: formData.resumen,
+        ciudad: formData.ciudad,
+        direccion: formData.direccion,
+        telefono: formData.telefono,
+        whatsapp: formData.whatsapp,
+        horario: formData.horario,
+        ubicacionUrl: formData.ubicacionUrl,
         fotos,
-        servicios: servicios
+        servicios: formData.servicios
           .split(',')
           .map((item) => item.trim())
           .filter(Boolean)
@@ -117,8 +195,8 @@ export default function PerfilPage() {
       setPortadaFile(null);
       setGalleryFiles([]);
       setSuccess('Ficha actualizada correctamente.');
-    } catch {
-      setError('No se pudo guardar la ficha. Revisa Firebase Storage y vuelve a intentar.');
+    } catch (saveError) {
+      setError(getFirebaseSaveMessage(saveError));
     } finally {
       setSaving(false);
     }

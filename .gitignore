@@ -26,3 +26,4 @@ yarn-error.log*
 
 # VS Code
 .vscode/
+.vercel

@@ -26,15 +26,49 @@ export function InstallAppButton() {
 
   useEffect(() => {
     setIsInstalled(isRunningStandalone());
+    let cleanupServiceWorker: () => void = () => undefined;
 
     if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
-      window.addEventListener(
-        'load',
-        () => {
-          navigator.serviceWorker.register('/sw.js').catch(() => undefined);
-        },
-        { once: true }
-      );
+      const hadController = Boolean(navigator.serviceWorker.controller);
+      let refreshing = false;
+
+      const activateWaitingWorker = (registration: ServiceWorkerRegistration) => {
+        registration.waiting?.postMessage({ type: 'SKIP_WAITING' });
+      };
+
+      const handleControllerChange = () => {
+        if (!hadController || refreshing) return;
+        refreshing = true;
+        window.location.reload();
+      };
+
+      const registerServiceWorker = () => {
+        navigator.serviceWorker
+          .register('/sw.js', { updateViaCache: 'none' })
+          .then((registration) => {
+            activateWaitingWorker(registration);
+            registration.update().catch(() => undefined);
+
+            registration.addEventListener('updatefound', () => {
+              const worker = registration.installing;
+
+              worker?.addEventListener('statechange', () => {
+                if (worker.state === 'installed' && navigator.serviceWorker.controller) {
+                  worker.postMessage({ type: 'SKIP_WAITING' });
+                }
+              });
+            });
+          })
+          .catch(() => undefined);
+      };
+
+      window.addEventListener('load', registerServiceWorker, { once: true });
+      navigator.serviceWorker.addEventListener('controllerchange', handleControllerChange);
+
+      cleanupServiceWorker = () => {
+        window.removeEventListener('load', registerServiceWorker);
+        navigator.serviceWorker.removeEventListener('controllerchange', handleControllerChange);
+      };
     }
 
     const handleBeforeInstallPrompt = (event: Event) => {
@@ -56,6 +90,7 @@ export function InstallAppButton() {
     displayMode.addEventListener('change', handleDisplayModeChange);
 
     return () => {
+      cleanupServiceWorker();
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('appinstalled', handleAppInstalled);
       displayMode.removeEventListener('change', handleDisplayModeChange);
