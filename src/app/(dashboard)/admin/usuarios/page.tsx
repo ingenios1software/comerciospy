@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { CalendarClock, CheckCircle2, RefreshCw, ShieldCheck, UserPlus } from 'lucide-react';
+import { CalendarClock, CheckCircle2, Pencil, RefreshCw, ShieldCheck, UserPlus, X } from 'lucide-react';
 import { Sidebar } from '@/components/layout/sidebar';
 import { useAuth } from '@/lib/firebase/auth-context';
 import { categories } from '@/lib/categories';
@@ -93,8 +93,10 @@ export default function AdminUsuariosPage() {
   const [comercios, setComercios] = useState<Comercio[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
   const [usersError, setUsersError] = useState<string | null>(null);
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
 
   const canCreateUsers = profile?.rol === 'superadmin';
+  const isEditing = Boolean(editingUserId);
   const comerciosById = useMemo(() => new Map(comercios.map((comercio) => [comercio.id, comercio])), [comercios]);
   const commerceUsers = useMemo(
     () =>
@@ -133,6 +135,59 @@ export default function AdminUsuariosPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canCreateUsers]);
 
+  const resetForm = () => {
+    setEditingUserId(null);
+    setRol('comercio');
+    setNombre('');
+    setEmail('');
+    setPassword('');
+    setComercioNombre('');
+    setRubro('');
+    setCategoria(categoryOptions[0]?.label ?? 'Servicios');
+    setCiudad('');
+    setDireccion('');
+    setTelefono('');
+    setWhatsapp('');
+    setHorario('');
+    setDescripcion('');
+    setPublicarComercio(true);
+    setPlanNombre('Basico');
+    setSuscripcionEstado('active');
+    setSuscripcionInicio(new Date().toISOString().slice(0, 10));
+    setSuscripcionVenceEn(dateInputAfterMonths(1));
+    setMontoMensual('');
+    setError(null);
+    setCreatedUser(null);
+  };
+
+  const handleEditUser = (selectedUser: UsuarioApp) => {
+    const comercio = comerciosById.get(selectedUser.comercioId ?? selectedUser.id);
+
+    setEditingUserId(selectedUser.id);
+    setRol(selectedUser.rol);
+    setNombre(selectedUser.nombre);
+    setEmail(selectedUser.email);
+    setPassword('');
+    setComercioNombre(comercio?.nombre ?? selectedUser.nombre);
+    setRubro(comercio?.rubro ?? '');
+    setCategoria(comercio?.categoria ?? categoryOptions[0]?.label ?? 'Servicios');
+    setCiudad(comercio?.ciudad ?? '');
+    setDireccion(comercio?.direccion ?? '');
+    setTelefono(comercio?.telefono ?? '');
+    setWhatsapp(comercio?.whatsapp ?? '');
+    setHorario(comercio?.horario ?? '');
+    setDescripcion(comercio?.descripcion ?? '');
+    setPublicarComercio(Boolean(comercio?.activo));
+    setPlanNombre(selectedUser.planNombre ?? 'Basico');
+    setSuscripcionEstado(selectedUser.suscripcionEstado ?? 'active');
+    setSuscripcionInicio(selectedUser.suscripcionInicio ?? new Date().toISOString().slice(0, 10));
+    setSuscripcionVenceEn(selectedUser.suscripcionVenceEn ?? dateInputAfterMonths(1));
+    setMontoMensual(selectedUser.montoMensual ? String(selectedUser.montoMensual) : '');
+    setError(null);
+    setCreatedUser(null);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError(null);
@@ -148,15 +203,16 @@ export default function AdminUsuariosPage() {
     try {
       const idToken = await user.getIdToken();
       const response = await fetch('/api/admin/users', {
-        method: 'POST',
+        method: isEditing ? 'PATCH' : 'POST',
         headers: {
           Authorization: `Bearer ${idToken}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
+          id: editingUserId,
           nombre,
           email,
-          password,
+          password: isEditing ? undefined : password,
           rol,
           suscripcion:
             rol === 'comercio'
@@ -194,8 +250,8 @@ export default function AdminUsuariosPage() {
       }
 
       setCreatedUser(data as CreatedUserResponse);
-      setPassword('');
       await loadUsers();
+      setPassword('');
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : 'No se pudo crear el usuario.');
     } finally {
@@ -220,8 +276,10 @@ export default function AdminUsuariosPage() {
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.26em] text-accent">Administracion</p>
-                <h1 className="mt-2 text-3xl font-semibold">Crear usuario</h1>
-                <p className="mt-2 text-sm leading-6 text-slate-600">Alta directa para cuentas internas y comercios.</p>
+                <h1 className="mt-2 text-3xl font-semibold">{isEditing ? 'Editar usuario' : 'Crear usuario'}</h1>
+                <p className="mt-2 text-sm leading-6 text-slate-600">
+                  {isEditing ? 'Actualiza datos comerciales, plan y vencimiento sin crear otra cuenta.' : 'Alta directa para cuentas internas y comercios.'}
+                </p>
               </div>
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-50 text-accent">
                 <ShieldCheck className="h-5 w-5" />
@@ -235,6 +293,20 @@ export default function AdminUsuariosPage() {
               </div>
             ) : (
               <form className="mt-6 space-y-5" onSubmit={handleSubmit}>
+                {isEditing ? (
+                  <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-amber-50 p-4 text-sm text-amber-900">
+                    <span>Editando usuario existente. La contrasena no se cambia desde este formulario.</span>
+                    <button
+                      type="button"
+                      onClick={resetForm}
+                      className="inline-flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-xs font-semibold text-amber-900 ring-1 ring-amber-200"
+                    >
+                      <X className="h-4 w-4" />
+                      Cancelar edicion
+                    </button>
+                  </div>
+                ) : null}
+
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Field id="nombre" label="Nombre del usuario" value={nombre} onChange={setNombre} required />
                   <SelectField
@@ -243,12 +315,22 @@ export default function AdminUsuariosPage() {
                     value={rol}
                     onChange={(value) => setRol(value as UserRole)}
                     options={roleOptions}
+                    disabled={isEditing}
                   />
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <Field id="email" label="Email" value={email} onChange={setEmail} type="email" required />
-                  <Field id="password" label="Contrasena temporal" value={password} onChange={setPassword} type="password" required />
+                  <Field id="email" label="Email" value={email} onChange={setEmail} type="email" required disabled={isEditing} />
+                  <Field
+                    id="password"
+                    label={isEditing ? 'Contrasena' : 'Contrasena temporal'}
+                    value={password}
+                    onChange={setPassword}
+                    type="password"
+                    placeholder={isEditing ? 'No se modifica al editar' : undefined}
+                    required={!isEditing}
+                    disabled={isEditing}
+                  />
                 </div>
 
                 {rol === 'comercio' ? (
@@ -326,8 +408,12 @@ export default function AdminUsuariosPage() {
                   <div className="flex items-start gap-3 rounded-2xl bg-emerald-50 p-4 text-sm leading-6 text-emerald-800">
                     <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" />
                     <div>
-                      <p className="font-semibold">Usuario creado correctamente.</p>
-                      <p>{createdUser.user.email} ya puede iniciar sesion con la contrasena temporal.</p>
+                      <p className="font-semibold">{isEditing ? 'Usuario actualizado correctamente.' : 'Usuario creado correctamente.'}</p>
+                      <p>
+                        {isEditing
+                          ? `${createdUser.user.nombre} ya tiene sus datos actualizados.`
+                          : `${createdUser.user.email} ya puede iniciar sesion con la contrasena temporal.`}
+                      </p>
                     </div>
                   </div>
                 ) : null}
@@ -337,8 +423,8 @@ export default function AdminUsuariosPage() {
                   disabled={saving}
                   className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-accent px-5 py-4 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-70"
                 >
-                  <UserPlus className="h-4 w-4" />
-                  {saving ? 'Creando...' : 'Crear usuario'}
+                  {isEditing ? <Pencil className="h-4 w-4" /> : <UserPlus className="h-4 w-4" />}
+                  {saving ? (isEditing ? 'Guardando...' : 'Creando...') : isEditing ? 'Guardar cambios' : 'Crear usuario'}
                 </button>
               </form>
             )}
@@ -381,12 +467,13 @@ export default function AdminUsuariosPage() {
                       <th className="px-4 py-3">Vencimiento</th>
                       <th className="px-4 py-3">Monto</th>
                       <th className="px-4 py-3">Guia</th>
+                      <th className="px-4 py-3">Accion</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 bg-white">
                     {usersLoading ? (
                       <tr>
-                        <td colSpan={6} className="px-4 py-6 text-center text-slate-500">
+                        <td colSpan={7} className="px-4 py-6 text-center text-slate-500">
                           Cargando usuarios...
                         </td>
                       </tr>
@@ -435,12 +522,22 @@ export default function AdminUsuariosPage() {
                                 {comercio?.activo ? 'Publicado' : 'Pendiente'}
                               </span>
                             </td>
+                            <td className="px-4 py-4">
+                              <button
+                                type="button"
+                                onClick={() => handleEditUser(item)}
+                                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                                Editar
+                              </button>
+                            </td>
                           </tr>
                         );
                       })
                     ) : (
                       <tr>
-                        <td colSpan={6} className="px-4 py-6 text-center text-slate-500">
+                        <td colSpan={7} className="px-4 py-6 text-center text-slate-500">
                           Todavia no hay clientes comercio.
                         </td>
                       </tr>
@@ -463,7 +560,8 @@ function Field({
   onChange,
   type = 'text',
   placeholder,
-  required
+  required,
+  disabled
 }: {
   id: string;
   label: string;
@@ -472,6 +570,7 @@ function Field({
   type?: string;
   placeholder?: string;
   required?: boolean;
+  disabled?: boolean;
 }) {
   return (
     <div>
@@ -488,6 +587,7 @@ function Field({
         inputMode={type === 'email' ? 'email' : undefined}
         className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-950 outline-none transition focus:border-accent focus:bg-white focus:ring-2 focus:ring-red-100"
         required={required}
+        disabled={disabled}
       />
     </div>
   );
@@ -507,13 +607,15 @@ function SelectField({
   label,
   value,
   onChange,
-  options
+  options,
+  disabled
 }: {
   id: string;
   label: string;
   value: string;
   onChange: (value: string) => void;
   options: Array<{ value: string; label: string }>;
+  disabled?: boolean;
 }) {
   return (
     <div>
@@ -525,6 +627,7 @@ function SelectField({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-950 outline-none transition focus:border-accent focus:bg-white focus:ring-2 focus:ring-red-100"
+        disabled={disabled}
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>

@@ -104,6 +104,32 @@ export async function createFirestoreDocument(
   }
 }
 
+export async function updateFirestoreDocument(
+  projectId: string,
+  collection: string,
+  id: string,
+  data: Record<string, unknown>,
+  idToken: string
+) {
+  const params = new URLSearchParams();
+  Object.keys(data).forEach((key) => params.append('updateMask.fieldPaths', key));
+
+  const response = await fetch(`${getFirestoreBaseUrl(projectId)}/${collection}/${encodeURIComponent(id)}?${params.toString()}`, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${idToken}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      fields: Object.fromEntries(Object.entries(data).map(([key, value]) => [key, toFirestoreValue(value)]))
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(await parseFirestoreError(response));
+  }
+}
+
 export async function deleteFirestoreDocument(projectId: string, collection: string, id: string, idToken: string) {
   const response = await fetch(`${getFirestoreBaseUrl(projectId)}/${collection}/${encodeURIComponent(id)}`, {
     method: 'DELETE',

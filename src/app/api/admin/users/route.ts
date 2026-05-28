@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createFirestoreDocument, deleteFirestoreDocument, getFirestoreDocument } from '@/lib/firebase/firestore-rest';
+import { createFirestoreDocument, deleteFirestoreDocument, getFirestoreDocument, updateFirestoreDocument } from '@/lib/firebase/firestore-rest';
 import type { Comercio, SubscriptionStatus, UserRole, UsuarioApp } from '@/types';
 
 export const runtime = 'nodejs';
@@ -13,14 +13,24 @@ type CreateUserBody = {
   nombre?: string;
   rol?: UserRole;
   comercio?: Partial<Comercio>;
-  suscripcion?: {
-    planNombre?: string;
-    estado?: SubscriptionStatus;
-    inicio?: string;
-    venceEn?: string;
-    montoMensual?: number;
-    moneda?: string;
-  };
+  suscripcion?: SubscriptionInput;
+};
+
+type SubscriptionInput = {
+  planNombre?: string;
+  estado?: SubscriptionStatus;
+  inicio?: string;
+  venceEn?: string;
+  montoMensual?: number;
+  moneda?: string;
+};
+
+type UpdateUserBody = {
+  id?: string;
+  nombre?: string;
+  rol?: UserRole;
+  comercio?: Partial<Comercio>;
+  suscripcion?: SubscriptionInput;
 };
 
 type FirebaseSignUpResponse = {
@@ -268,5 +278,131 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({
     user: userProfile,
     comercio: commerceDocument
+  });
+}
+
+export async function PATCH(request: NextRequest) {
+  const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+
+  if (!projectId) {
+    return jsonError('Falta configurar Firebase en el servidor.', 503);
+  }
+
+  const adminToken = getBearerToken(request);
+  const decodedToken = decodeJwtPayload(adminToken);
+  const requesterUid = decodedToken?.user_id ?? decodedToken?.sub;
+
+  if (!adminToken || !requesterUid) {
+    return jsonError('Sesion invalida.', 401);
+  }
+
+  let requesterProfile: UsuarioApp;
+
+  try {
+    requesterProfile = await getFirestoreDocument<UsuarioApp>(projectId, 'users', requesterUid, adminToken);
+  } catch {
+    return jsonError('No se pudo validar el perfil administrador.', 403);
+  }
+
+  if (requesterProfile.rol !== 'superadmin') {
+    return jsonError('Solo un superadmin puede actualizar usuarios desde la app.', 403);
+  }
+
+  const body = (await request.json().catch(() => null)) as UpdateUserBody | null;
+  const id = clean(body?.id);
+  const nombre = clean(body?.nombre);
+  const rol = body?.rol ?? 'comercio';
+  const suscripcion = body?.suscripcion ?? {};
+  const planNombre = clean(suscripcion.planNombre) || (rol === 'comercio' ? 'Basico' : '');
+  const suscripcionInicio = clean(suscripcion.inicio);
+  const suscripcionVenceEn = clean(suscripcion.venceEn);
+  const suscripcionEstado = subscriptionStatuses.includes(suscripcion.estado ?? 'active')
+    ? suscripcion.estado ?? 'active'
+    : 'active';
+  const montoMensual = Number(suscripcion.montoMensual ?? 0);
+  const moneda = clean(suscripcion.moneda) || 'PYG';
+
+  if (!id) {
+    return jsonError('Selecciona un usuario para actualizar.', 400);
+  }
+
+  if (!nombre) {
+    return jsonError('Ingresa el nombre del usuario.', 400);
+  }
+
+  if (!creatableRoles.includes(rol)) {
+    return jsonError('El rol seleccionado no puede actualizarse desde este formulario.', 400);
+  }
+
+  if (rol === 'comercio' && !suscripcionVenceEn) {
+    return jsonError('Ingresa el vencimiento de la suscripcion.', 400);
+  }
+
+  const comercio = body?.comercio ?? {};
+  const comercioNombre = clean(comercio.nombre) || nombre;
+  const rubro = clean(comercio.rubro);
+  const categoria = clean(comercio.categoria) || 'Servicios';
+  const ciudad = clean(comercio.ciudad);
+  const direccion = clean(comercio.direccion);
+  const telefono = clean(comercio.telefono);
+  const whatsapp = clean(comercio.whatsapp);
+  const horario = clean(comercio.horario);
+  const descripcion = clean(comercio.descripcion);
+  const activo = typeof comercio.activo === 'boolean' ? comercio.activo : false;
+
+  if (rol === 'comercio' && (!comercioNombre || !rubro || !ciudad || !whatsapp)) {
+    return jsonError('Completa nombre del comercio, rubro, ciudad y WhatsApp.', 400);
+  }
+
+  const userUpdate: Partial<UsuarioApp> = {
+    nombre,
+    rol,
+    ...(rol === 'comercio'
+      ? {
+          comercioId: id,
+          planNombre,
+          suscripcionEstado,
+          suscripcionInicio,
+          suscripcionVenceEn,
+          montoMensual: Number.isFinite(montoMensual) ? montoMensual : 0,
+          moneda
+        }
+      : {})
+  };
+
+  const commerceUpdate: Partial<Comercio> | null =
+    rol === 'comercio'
+      ? {
+          id,
+          ownerId: id,
+          nombre: comercioNombre,
+          rubro,
+          categoria,
+          descripcion,
+          ciudad,
+          direccion,
+          telefono,
+          whatsapp,
+          horario,
+          activo
+        }
+      : null;
+
+  try {
+    await updateFirestoreDocument(projectId, 'users', id, userUpdate as Record<string, unknown>, adminToken);
+
+    if (commerceUpdate) {
+      await updateFirestoreDocument(projectId, 'comercios', id, commerceUpdate as Record<string, unknown>, adminToken);
+    }
+  } catch (error) {
+    return jsonError(error instanceof Error ? error.message : 'No se pudo actualizar el usuario.', 500);
+  }
+
+  return NextResponse.json({
+    user: {
+      id,
+      ...userUpdate
+    },
+    comercio: commerceUpdate
   });
 }
