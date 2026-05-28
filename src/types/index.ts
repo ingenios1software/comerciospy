@@ -1,4 +1,5 @@
 export type UserRole = 'superadmin' | 'admin' | 'comercio' | 'usuario' | 'cliente';
+export type SubscriptionStatus = 'trial' | 'active' | 'past_due' | 'expired' | 'cancelled';
 
 export type UsuarioApp = {
   id: string;
@@ -6,6 +7,12 @@ export type UsuarioApp = {
   email: string;
   rol: UserRole;
   comercioId?: string;
+  planNombre?: string;
+  suscripcionEstado?: SubscriptionStatus;
+  suscripcionInicio?: string;
+  suscripcionVenceEn?: string;
+  montoMensual?: number;
+  moneda?: string;
   activo: boolean;
   creadoEn: string;
 };

@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createFirestoreDocument, deleteFirestoreDocument, getFirestoreDocument } from '@/lib/firebase/firestore-rest';
-import type { Comercio, UserRole, UsuarioApp } from '@/types';
+import type { Comercio, SubscriptionStatus, UserRole, UsuarioApp } from '@/types';
 
 export const runtime = 'nodejs';
 
 const creatableRoles: UserRole[] = ['admin', 'comercio', 'usuario', 'cliente'];
+const subscriptionStatuses: SubscriptionStatus[] = ['trial', 'active', 'past_due', 'expired', 'cancelled'];
 
 type CreateUserBody = {
   email?: string;
@@ -12,6 +13,14 @@ type CreateUserBody = {
   nombre?: string;
   rol?: UserRole;
   comercio?: Partial<Comercio>;
+  suscripcion?: {
+    planNombre?: string;
+    estado?: SubscriptionStatus;
+    inicio?: string;
+    venceEn?: string;
+    montoMensual?: number;
+    moneda?: string;
+  };
 };
 
 type FirebaseSignUpResponse = {
@@ -131,6 +140,15 @@ export async function POST(request: NextRequest) {
   const password = clean(body?.password);
   const nombre = clean(body?.nombre);
   const rol = body?.rol ?? 'comercio';
+  const suscripcion = body?.suscripcion ?? {};
+  const planNombre = clean(suscripcion.planNombre) || (rol === 'comercio' ? 'Basico' : '');
+  const suscripcionInicio = clean(suscripcion.inicio);
+  const suscripcionVenceEn = clean(suscripcion.venceEn);
+  const suscripcionEstado = subscriptionStatuses.includes(suscripcion.estado ?? 'active')
+    ? suscripcion.estado ?? 'active'
+    : 'active';
+  const montoMensual = Number(suscripcion.montoMensual ?? 0);
+  const moneda = clean(suscripcion.moneda) || 'PYG';
 
   if (!email || !email.includes('@')) {
     return jsonError('Ingresa un email valido.', 400);
@@ -146,6 +164,10 @@ export async function POST(request: NextRequest) {
 
   if (!creatableRoles.includes(rol)) {
     return jsonError('El rol seleccionado no puede crearse desde este formulario.', 400);
+  }
+
+  if (rol === 'comercio' && !suscripcionVenceEn) {
+    return jsonError('Ingresa el vencimiento de la suscripcion.', 400);
   }
 
   const comercio = body?.comercio ?? {};
@@ -183,6 +205,16 @@ export async function POST(request: NextRequest) {
     email,
     rol,
     ...(rol === 'comercio' ? { comercioId: uid } : {}),
+    ...(rol === 'comercio'
+      ? {
+          planNombre,
+          suscripcionEstado,
+          suscripcionInicio: suscripcionInicio || createdAt.slice(0, 10),
+          suscripcionVenceEn,
+          montoMensual: Number.isFinite(montoMensual) ? montoMensual : 0,
+          moneda
+        }
+      : {}),
     activo: true,
     creadoEn: createdAt
   };

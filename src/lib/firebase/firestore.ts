@@ -63,6 +63,11 @@ export async function getAllComercios(): Promise<Comercio[]> {
   return querySnapshot.docs.map((docItem) => docItem.data() as Comercio);
 }
 
+export async function getAllComerciosForAdmin(): Promise<Comercio[]> {
+  const querySnapshot = await getDocs(comerciosCollectionRef());
+  return querySnapshot.docs.map((docItem) => docItem.data() as Comercio);
+}
+
 export async function getComercioById(id: string): Promise<Comercio | null> {
   const comercioDoc = await getDoc(comerciosCollection(id));
   return comercioDoc.exists() ? (comercioDoc.data() as Comercio) : null;
