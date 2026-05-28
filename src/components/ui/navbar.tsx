@@ -7,6 +7,7 @@ import { useAuth } from '@/lib/firebase/auth-context';
 import { adminContactMessage, adminWhatsapp } from '@/lib/admin-contact';
 import { buildWhatsappUrl } from '@/lib/utils/format';
 import { ShareAppButton } from './share-app-button';
+import { developerBrand } from '@/lib/brand';
 
 export function Navbar() {
   const { user, loading, logout } = useAuth();
@@ -35,7 +36,7 @@ export function Navbar() {
     <nav className="fixed inset-x-0 top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur-xl">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
         <Link href="/" className="text-lg font-semibold text-slate-950">
-          ComerciosPY
+          ComerciosPY <span className="hidden text-xs font-medium text-slate-500 sm:inline">by {developerBrand}</span>
         </Link>
         <div className="hidden items-center gap-2 sm:flex">
           {navItems.map((item) => (

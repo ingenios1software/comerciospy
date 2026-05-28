@@ -4,17 +4,22 @@ import { AuthProvider } from '@/lib/firebase/auth-context';
 import { Navbar } from '@/components/ui/navbar';
 import { BottomNavigation } from '@/components/layout/bottom-navigation';
 import { InstallAppButton } from '@/components/pwa/install-app-button';
+import { BrandFooter } from '@/components/layout/brand-footer';
+import { developerBrand } from '@/lib/brand';
 
 const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://comerciospy.vercel.app';
 
 export const metadata: Metadata = {
   metadataBase: new URL(appUrl),
   title: 'ComerciosPY',
-  description: 'Guia moderna de comercios, servicios y contactos locales por WhatsApp.',
+  description: `Guia moderna de comercios, servicios y contactos locales por WhatsApp. Desarrollada por ${developerBrand}.`,
   applicationName: 'ComerciosPY',
+  authors: [{ name: developerBrand }],
+  creator: developerBrand,
+  publisher: developerBrand,
   openGraph: {
     title: 'ComerciosPY',
-    description: 'Busca gratis comercios, servicios y contactos por ciudad.',
+    description: `Busca gratis comercios, servicios y contactos por ciudad. Desarrollada por ${developerBrand}.`,
     url: appUrl,
     siteName: 'ComerciosPY',
     type: 'website',
@@ -23,7 +28,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary',
     title: 'ComerciosPY',
-    description: 'Busca gratis comercios, servicios y contactos por ciudad.'
+    description: `Busca gratis comercios, servicios y contactos por ciudad. Desarrollada por ${developerBrand}.`
   },
   appleWebApp: {
     capable: true,
@@ -55,6 +60,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <AuthProvider>
           <Navbar />
           {children}
+          <BrandFooter />
           <BottomNavigation />
           <InstallAppButton />
         </AuthProvider>

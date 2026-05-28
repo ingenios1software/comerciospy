@@ -2,6 +2,8 @@
 
 Guia web mobile-first para comercios locales y prestadores de servicios en Paraguay.
 
+Creado y desarrollado por **IngenioSoft95**.
+
 ## Desarrollo local
 
 ```bash
