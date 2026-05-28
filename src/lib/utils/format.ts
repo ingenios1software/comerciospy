@@ -22,8 +22,12 @@ export const buildMapsUrl = (comercio: { ubicacionUrl?: string; direccion?: stri
 };
 
 export const buildPublicCommerceUrl = (id: string) => {
+  return `${getAppUrl()}/comercios/${id}`;
+};
+
+export const getAppUrl = () => {
   const baseUrl =
     process.env.NEXT_PUBLIC_APP_URL ||
     (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000');
-  return `${baseUrl.replace(/\/$/, '')}/comercios/${id}`;
+  return baseUrl.replace(/\/$/, '');
 };

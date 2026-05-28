@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/firebase/auth-context';
 import { adminContactMessage, adminWhatsapp } from '@/lib/admin-contact';
 import { buildWhatsappUrl } from '@/lib/utils/format';
+import { ShareAppButton } from './share-app-button';
 
 export function Navbar() {
   const { user, loading, logout } = useAuth();
@@ -43,24 +44,30 @@ export function Navbar() {
             </Link>
           ))}
           {user ? (
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="inline-flex items-center gap-2 rounded-xl bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-200"
-            >
-              <LogOut className="h-4 w-4" />
-              Salir
-            </button>
+            <>
+              <ShareAppButton />
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="inline-flex items-center gap-2 rounded-xl bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-200"
+              >
+                <LogOut className="h-4 w-4" />
+                Salir
+              </button>
+            </>
           ) : (
-            <a
-              href={buildWhatsappUrl(adminWhatsapp, adminContactMessage)}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700"
-            >
-              <MessageCircle className="h-4 w-4" />
-              Quiero aparecer
-            </a>
+            <>
+              <ShareAppButton />
+              <a
+                href={buildWhatsappUrl(adminWhatsapp, adminContactMessage)}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700"
+              >
+                <MessageCircle className="h-4 w-4" />
+                Quiero aparecer
+              </a>
+            </>
           )}
         </div>
       </div>

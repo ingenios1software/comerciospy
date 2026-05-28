@@ -5,10 +5,26 @@ import { Navbar } from '@/components/ui/navbar';
 import { BottomNavigation } from '@/components/layout/bottom-navigation';
 import { InstallAppButton } from '@/components/pwa/install-app-button';
 
+const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://comerciospy.vercel.app';
+
 export const metadata: Metadata = {
+  metadataBase: new URL(appUrl),
   title: 'ComerciosPY',
   description: 'Guia moderna de comercios, servicios y contactos locales por WhatsApp.',
   applicationName: 'ComerciosPY',
+  openGraph: {
+    title: 'ComerciosPY',
+    description: 'Busca gratis comercios, servicios y contactos por ciudad.',
+    url: appUrl,
+    siteName: 'ComerciosPY',
+    type: 'website',
+    locale: 'es_PY'
+  },
+  twitter: {
+    card: 'summary',
+    title: 'ComerciosPY',
+    description: 'Busca gratis comercios, servicios y contactos por ciudad.'
+  },
   appleWebApp: {
     capable: true,
     title: 'ComerciosPY',

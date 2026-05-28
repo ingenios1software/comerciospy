@@ -8,6 +8,7 @@ import { CommerceCard } from '@/components/comercios/commerce-card';
 import { PublicacionCard } from '@/components/publicaciones/publicacion-card';
 import { CategoryPills } from '@/components/ui/category-pills';
 import { SearchBar } from '@/components/ui/search-bar';
+import { ShareAppButton } from '@/components/ui/share-app-button';
 import { categories } from '@/lib/categories';
 import { cityMatches, getCityOptions } from '@/lib/cities';
 import { getAllComercios, getLatestPublications } from '@/lib/firebase/firestore';
@@ -128,6 +129,9 @@ export default function Home() {
               <MessageCircle className="h-4 w-4" />
               Soy comercio y quiero aparecer
             </Link>
+            <div className="mt-3 border-t border-slate-100 pt-3">
+              <ShareAppButton mode="panel" />
+            </div>
           </div>
         </section>
 
@@ -153,6 +157,9 @@ export default function Home() {
             <span>Soy comercio o prestador</span>
             <span className="text-accent">Quiero aparecer</span>
           </Link>
+          <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-soft lg:hidden">
+            <ShareAppButton mode="panel" />
+          </div>
         </section>
 
         <section className="space-y-3">
