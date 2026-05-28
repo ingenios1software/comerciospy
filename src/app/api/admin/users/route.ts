@@ -160,6 +160,7 @@ export async function POST(request: NextRequest) {
   const descripcion = clean(comercio.descripcion);
   const resumen = clean(comercio.resumen);
   const ubicacionUrl = clean(comercio.ubicacionUrl);
+  const activo = typeof comercio.activo === 'boolean' ? comercio.activo : false;
 
   if (rol === 'comercio' && (!comercioNombre || !rubro || !ciudad || !whatsapp)) {
     return jsonError('Completa nombre del comercio, rubro, ciudad y WhatsApp.', 400);
@@ -210,7 +211,7 @@ export async function POST(request: NextRequest) {
             lat: 0,
             lng: 0
           },
-          activo: false,
+          activo,
           verificado: false,
           creadoEn: createdAt
         }

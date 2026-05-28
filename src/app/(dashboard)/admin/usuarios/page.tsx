@@ -34,6 +34,7 @@ export default function AdminUsuariosPage() {
   const [whatsapp, setWhatsapp] = useState('');
   const [horario, setHorario] = useState('');
   const [descripcion, setDescripcion] = useState('');
+  const [publicarComercio, setPublicarComercio] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [createdUser, setCreatedUser] = useState<CreatedUserResponse | null>(null);
@@ -76,7 +77,8 @@ export default function AdminUsuariosPage() {
                   telefono,
                   whatsapp,
                   horario,
-                  descripcion
+                  descripcion,
+                  activo: publicarComercio
                 }
               : undefined
         })
@@ -184,6 +186,17 @@ export default function AdminUsuariosPage() {
                         className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-950 outline-none transition focus:border-accent focus:ring-2 focus:ring-red-100"
                       />
                     </div>
+
+                    <label htmlFor="publicarComercio" className="flex cursor-pointer items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700">
+                      <input
+                        id="publicarComercio"
+                        type="checkbox"
+                        checked={publicarComercio}
+                        onChange={(event) => setPublicarComercio(event.target.checked)}
+                        className="h-4 w-4 rounded border-slate-300 text-accent focus:ring-red-100"
+                      />
+                      Publicar en guia al crear
+                    </label>
                   </div>
                 ) : null}
 
