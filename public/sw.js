@@ -1,9 +1,7 @@
-const CACHE_VERSION = 'comerciospy-pwa-v20260528-1';
+const CACHE_VERSION = 'comerciospy-pwa-v20260528-3';
 const APP_CACHE = `${CACHE_VERSION}-app`;
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const APP_SHELL = [
-  '/',
-  '/comercios',
   '/manifest.json',
   '/icons/icon.svg',
   '/icons/icon-192.png',
@@ -56,16 +54,32 @@ async function cacheFirst(request) {
 }
 
 async function networkFirst(request) {
-  const cache = await caches.open(APP_CACHE);
-
   try {
-    const response = await fetch(request);
-    if (response.ok) {
-      cache.put(request, response.clone());
-    }
-    return response;
+    return await fetch(request, { cache: 'no-store' });
   } catch {
-    return (await cache.match(request)) || (await cache.match('/'));
+    return new Response(
+      `<!doctype html>
+      <html lang="es">
+        <head>
+          <meta charset="utf-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
+          <title>ComerciosPY</title>
+          <style>
+            body { margin: 0; min-height: 100vh; display: grid; place-items: center; font-family: Arial, sans-serif; background: #f8fafc; color: #0f172a; }
+            main { max-width: 320px; padding: 24px; text-align: center; }
+            a { color: #b91c1c; font-weight: 700; }
+          </style>
+        </head>
+        <body>
+          <main>
+            <h1>Sin conexion</h1>
+            <p>No pudimos cargar ComerciosPY. Revisa internet e intenta nuevamente.</p>
+            <a href="/login">Reintentar</a>
+          </main>
+        </body>
+      </html>`,
+      { headers: { 'Content-Type': 'text/html; charset=utf-8' } }
+    );
   }
 }
 
@@ -96,11 +110,6 @@ self.addEventListener('fetch', (event) => {
   if (url.searchParams.has('_rsc')) return;
 
   if (request.mode === 'navigate') {
-    if (url.pathname === '/login' || url.pathname.startsWith('/dashboard') || url.pathname.startsWith('/perfil') || url.pathname.startsWith('/publicar')) {
-      event.respondWith(fetch(request).catch(() => caches.match('/')));
-      return;
-    }
-
     event.respondWith(networkFirst(request));
     return;
   }

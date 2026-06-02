@@ -7,6 +7,7 @@ import { useParams } from 'next/navigation';
 import { getComercioById, getPublicationsByCommerce } from '@/lib/firebase/firestore';
 import { PublicacionCard } from '@/components/publicaciones/publicacion-card';
 import { DigitalBusinessCard } from '@/components/comercios/digital-business-card';
+import { ImageLightbox, type LightboxImage } from '@/components/ui/image-lightbox';
 import { sampleComercios, samplePublicaciones } from '@/lib/mockData';
 import { buildMapsUrl, buildWhatsappUrl, cleanPhone } from '@/lib/utils/format';
 import type { Comercio, Publicacion } from '@/types';
@@ -16,6 +17,7 @@ export default function ComercioDetailPage() {
   const commerceId = params?.id as string | undefined;
   const [comercio, setComercio] = useState<Comercio | null>(null);
   const [publicaciones, setPublicaciones] = useState<Publicacion[]>([]);
+  const [activeGalleryIndex, setActiveGalleryIndex] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -49,6 +51,15 @@ export default function ComercioDetailPage() {
     return [comercio.portadaUrl, ...(comercio.fotos ?? [])].filter(Boolean).slice(0, 6);
   }, [comercio]);
 
+  const galleryItems = useMemo<LightboxImage[]>(() => {
+    if (!comercio) return [];
+
+    return gallery.map((image, index) => ({
+      src: image,
+      alt: index === 0 ? `${comercio.nombre} portada` : `${comercio.nombre} foto ${index + 1}`
+    }));
+  }, [comercio, gallery]);
+
   if (loading) {
     return (
       <main className="min-h-screen bg-surface px-4 pb-28 pt-24 text-slate-950 sm:px-6">
@@ -75,8 +86,15 @@ export default function ComercioDetailPage() {
       <div className="mx-auto max-w-6xl space-y-6">
         <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-glow">
           <div className="relative min-h-[320px] bg-slate-100">
-            <img src={comercio.portadaUrl} alt={comercio.nombre} className="absolute inset-0 h-full w-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/20 to-transparent" />
+            <button
+              type="button"
+              onClick={() => setActiveGalleryIndex(0)}
+              className="absolute inset-0 h-full w-full cursor-zoom-in"
+              aria-label={`Ampliar portada de ${comercio.nombre}`}
+            >
+              <img src={comercio.portadaUrl} alt={comercio.nombre} className="h-full w-full object-cover" />
+            </button>
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/20 to-transparent" />
             <div className="absolute inset-x-0 bottom-0 p-5 text-white sm:p-8">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-slate-950">{comercio.categoria}</span>
@@ -118,9 +136,15 @@ export default function ComercioDetailPage() {
                   <h2 className="text-xl font-semibold text-slate-950">Fotos</h2>
                   <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-6">
                     {gallery.map((image, index) => (
-                      <div key={`${image}-${index}`} className="aspect-square overflow-hidden rounded-2xl bg-slate-100">
-                        <img src={image} alt={`${comercio.nombre} foto ${index + 1}`} className="h-full w-full object-cover" />
-                      </div>
+                      <button
+                        type="button"
+                        key={`${image}-${index}`}
+                        onClick={() => setActiveGalleryIndex(index)}
+                        className="group aspect-square cursor-zoom-in overflow-hidden rounded-2xl bg-slate-100 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
+                        aria-label={`Ampliar ${index === 0 ? 'portada' : `foto ${index + 1}`} de ${comercio.nombre}`}
+                      >
+                        <img src={image} alt={`${comercio.nombre} foto ${index + 1}`} className="h-full w-full object-cover transition duration-300 group-hover:scale-105" />
+                      </button>
                     ))}
                   </div>
                 </div>
@@ -177,6 +201,7 @@ export default function ComercioDetailPage() {
           </div>
         </section>
       </div>
+      <ImageLightbox images={galleryItems} activeIndex={activeGalleryIndex} onChange={setActiveGalleryIndex} onClose={() => setActiveGalleryIndex(null)} />
     </main>
   );
 }

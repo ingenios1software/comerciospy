@@ -31,6 +31,43 @@ const allowedCategories = [
   'Autos'
 ];
 
+const publicationSuggestionSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['titulo', 'descripcion', 'categoria', 'tipo', 'ideas', 'mejorasFoto', 'textoWhatsapp'],
+  properties: {
+    titulo: {
+      type: 'string'
+    },
+    descripcion: {
+      type: 'string'
+    },
+    categoria: {
+      type: 'string',
+      enum: allowedCategories
+    },
+    tipo: {
+      type: 'string',
+      enum: allowedTipos
+    },
+    ideas: {
+      type: 'array',
+      items: {
+        type: 'string'
+      }
+    },
+    mejorasFoto: {
+      type: 'array',
+      items: {
+        type: 'string'
+      }
+    },
+    textoWhatsapp: {
+      type: 'string'
+    }
+  }
+} as const;
+
 function getResponseText(response: OpenAiResponse) {
   if (response.output_text) return response.output_text;
 
@@ -148,6 +185,14 @@ export async function POST(request: Request) {
           ]
         }
       ],
+      text: {
+        format: {
+          type: 'json_schema',
+          name: 'publication_suggestion',
+          strict: true,
+          schema: publicationSuggestionSchema
+        }
+      },
       max_output_tokens: 900
     })
   });

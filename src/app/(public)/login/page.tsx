@@ -1,30 +1,54 @@
 "use client";
 
 import Link from 'next/link';
-import { LockKeyhole, LogIn, MessageCircle } from 'lucide-react';
+import { KeyRound, LockKeyhole, LogIn, MessageCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { FormEvent, useState } from 'react';
-import { signInUser } from '@/lib/firebase/auth';
+import { getAuthErrorMessage, getPasswordResetErrorMessage, sendUserPasswordReset, signInUser } from '@/lib/firebase/auth';
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError(null);
+    setSuccess(null);
     setLoading(true);
 
     try {
       await signInUser(email, password);
-      router.push('/dashboard');
-    } catch {
-      setError('No se pudo iniciar sesion. Revisa tus datos e intenta nuevamente.');
+      router.replace('/dashboard');
+    } catch (loginError) {
+      setError(getAuthErrorMessage(loginError));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePasswordReset = async () => {
+    setError(null);
+    setSuccess(null);
+
+    if (!email.trim()) {
+      setError('Ingresa tu email para enviarte la recuperacion.');
+      return;
+    }
+
+    setResetLoading(true);
+
+    try {
+      await sendUserPasswordReset(email);
+      setSuccess('Te enviamos un correo para restablecer la contrasena. Revisa tambien spam o promociones.');
+    } catch (resetError) {
+      setError(getPasswordResetErrorMessage(resetError));
+    } finally {
+      setResetLoading(false);
     }
   };
 
@@ -78,13 +102,23 @@ export default function LoginPage() {
               />
             </div>
             {error ? <p className="rounded-2xl bg-rose-50 p-3 text-sm text-rose-700">{error}</p> : null}
+            {success ? <p className="rounded-2xl bg-emerald-50 p-3 text-sm text-emerald-700">{success}</p> : null}
             <button
               type="submit"
               className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-accent px-5 py-3 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-70"
-              disabled={loading}
+              disabled={loading || resetLoading}
             >
               <LogIn className="h-4 w-4" />
               {loading ? 'Entrando...' : 'Iniciar sesion'}
+            </button>
+            <button
+              type="button"
+              onClick={handlePasswordReset}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-70"
+              disabled={loading || resetLoading}
+            >
+              <KeyRound className="h-4 w-4" />
+              {resetLoading ? 'Enviando...' : 'Restablecer contrasena'}
             </button>
           </form>
         </section>

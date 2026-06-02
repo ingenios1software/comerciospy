@@ -1,9 +1,10 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ImagePlus, Save } from 'lucide-react';
 import { Sidebar } from '@/components/layout/sidebar';
+import { ImageLightbox, type LightboxImage } from '@/components/ui/image-lightbox';
 import { useAuth } from '@/lib/firebase/auth-context';
 import { getComercioById, updateCommerce } from '@/lib/firebase/firestore';
 import { uploadFile } from '@/lib/firebase/storage';
@@ -82,11 +83,20 @@ export default function PerfilPage() {
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [portadaFile, setPortadaFile] = useState<File | null>(null);
   const [galleryFiles, setGalleryFiles] = useState<File[]>([]);
+  const [activePhotoIndex, setActivePhotoIndex] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   const comercioId = profile?.comercioId ?? user?.uid;
+  const photoLightboxItems = useMemo<LightboxImage[]>(
+    () =>
+      (comercio?.fotos ?? []).slice(0, 8).map((foto, index) => ({
+        src: foto,
+        alt: `Foto ${index + 1}`
+      })),
+    [comercio?.fotos]
+  );
 
   useEffect(() => {
     const loadCommerce = async () => {
@@ -297,12 +307,18 @@ export default function PerfilPage() {
                 <FileField id="galeria" label="Agregar fotos" multiple onChange={(files) => setGalleryFiles(files)} />
               </div>
 
-              {comercio?.fotos?.length ? (
+              {photoLightboxItems.length ? (
                 <div className="grid grid-cols-4 gap-2 sm:grid-cols-8">
-                  {comercio.fotos.slice(0, 8).map((foto, index) => (
-                    <div key={`${foto}-${index}`} className="aspect-square overflow-hidden rounded-2xl bg-slate-100">
-                      <img src={foto} alt={`Foto ${index + 1}`} className="h-full w-full object-cover" />
-                    </div>
+                  {photoLightboxItems.map((foto, index) => (
+                    <button
+                      type="button"
+                      key={`${foto.src}-${index}`}
+                      onClick={() => setActivePhotoIndex(index)}
+                      className="group aspect-square cursor-zoom-in overflow-hidden rounded-2xl bg-slate-100 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
+                      aria-label={`Ampliar foto ${index + 1}`}
+                    >
+                      <img src={foto.src} alt={foto.alt} className="h-full w-full object-cover transition duration-300 group-hover:scale-105" />
+                    </button>
                   ))}
                 </div>
               ) : null}
@@ -321,6 +337,7 @@ export default function PerfilPage() {
           </section>
         </div>
       </div>
+      <ImageLightbox images={photoLightboxItems} activeIndex={activePhotoIndex} onChange={setActivePhotoIndex} onClose={() => setActivePhotoIndex(null)} />
     </main>
   );
 }

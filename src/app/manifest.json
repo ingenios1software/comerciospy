@@ -5,7 +5,7 @@
   "description": "Guia moderna de comercios, servicios y contactos locales por WhatsApp. Desarrollada por IngenioSoft95.",
   "lang": "es-PY",
   "dir": "ltr",
-  "start_url": "/",
+  "start_url": "/login",
   "scope": "/",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui", "browser"],
