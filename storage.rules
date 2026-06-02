@@ -17,10 +17,20 @@ service firebase.storage {
       return isAuthenticated() && resource != null && resource.metadata.owner == request.auth.uid;
     }
 
+    function isPathOwner(ownerId) {
+      return isAuthenticated() && request.auth.uid == ownerId;
+    }
+
     function isValidImage() {
       return request.resource != null
         && request.resource.size < 10 * 1024 * 1024
         && request.resource.contentType.matches('image/.*');
+    }
+
+    match /publicaciones/{ownerId}/{publicationId} {
+      allow read: if true;
+      allow create, update: if isValidImage() && (isPathOwner(ownerId) || isAdmin());
+      allow delete: if isPathOwner(ownerId) || isAdmin();
     }
 
     match /publicaciones/{publicationId} {

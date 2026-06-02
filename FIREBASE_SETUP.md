@@ -47,6 +47,10 @@ NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=your_measurement_id_optional
    ```bash
    npm run build
    ```
+4. Publica las reglas de Firebase:
+   ```bash
+   firebase deploy --only firestore:rules,storage --project your_project_id
+   ```
 
 ## 4. Despliegue
 

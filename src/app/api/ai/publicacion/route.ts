@@ -4,11 +4,16 @@ import type { AiPublicationSuggestion, Publicacion } from '@/types';
 export const runtime = 'nodejs';
 
 type OpenAiResponse = {
+  status?: string;
+  incomplete_details?: {
+    reason?: string;
+  } | null;
   output_text?: string;
   output?: Array<{
     content?: Array<{
       type?: string;
       text?: string;
+      refusal?: string;
     }>;
   }>;
   error?: {
@@ -82,6 +87,16 @@ function getResponseText(response: OpenAiResponse) {
   );
 }
 
+function getResponseRefusal(response: OpenAiResponse) {
+  return (
+    response.output
+      ?.flatMap((item) => item.content ?? [])
+      .filter((content) => typeof content.refusal === 'string' && content.refusal.trim())
+      .map((content) => content.refusal)
+      .join('\n') ?? ''
+  );
+}
+
 function parseJson(text: string) {
   const cleaned = text
     .trim()
@@ -138,6 +153,14 @@ function getOpenAiErrorMessage(status: number, error?: OpenAiResponse['error']) 
   return message || 'No se pudo generar la sugerencia con IA.';
 }
 
+function getIncompleteMessage(reason?: string) {
+  if (reason === 'max_output_tokens') {
+    return 'La IA necesito mas espacio para terminar la sugerencia. Intenta de nuevo con una foto mas clara o menos texto.';
+  }
+
+  return 'La IA no termino de generar la sugerencia. Intenta nuevamente.';
+}
+
 export async function POST(request: Request) {
   const apiKey = process.env.OPENAI_API_KEY;
 
@@ -167,6 +190,7 @@ export async function POST(request: Request) {
   const buffer = Buffer.from(await image.arrayBuffer());
   const dataUrl = `data:${image.type};base64,${buffer.toString('base64')}`;
   const model = process.env.OPENAI_MODEL ?? 'gpt-5-mini';
+  const isGpt5Model = model.toLowerCase().startsWith('gpt-5');
 
   const prompt = [
     'Analiza la foto y ayuda a un comercio local de Paraguay a crear una publicacion clara, vendible y honesta.',
@@ -182,45 +206,62 @@ export async function POST(request: Request) {
     .filter(Boolean)
     .join('\n');
 
-  const openAiResponse = await fetch('https://api.openai.com/v1/responses', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      model,
-      input: [
-        {
-          role: 'developer',
-          content: [
-            {
-              type: 'input_text',
-              text: 'Eres un asistente de marketing para comercios locales. Respondes en espanol paraguayo neutro, con tono profesional y directo.'
-            }
-          ]
-        },
-        {
-          role: 'user',
-          content: [
-            { type: 'input_text', text: prompt },
-            { type: 'input_image', image_url: dataUrl, detail: 'low' }
-          ]
-        }
-      ],
-      text: {
-        format: {
-          type: 'json_schema',
-          name: 'publication_suggestion',
-          strict: true,
-          schema: publicationSuggestionSchema
-        }
+  const requestBody = {
+    model,
+    input: [
+      {
+        role: 'developer',
+        content: [
+          {
+            type: 'input_text',
+            text: 'Eres un asistente de marketing para comercios locales. Respondes en espanol paraguayo neutro, con tono profesional y directo.'
+          }
+        ]
       },
-      max_output_tokens: 900
-    })
-  });
+      {
+        role: 'user',
+        content: [
+          { type: 'input_text', text: prompt },
+          { type: 'input_image', image_url: dataUrl, detail: 'low' }
+        ]
+      }
+    ],
+    text: {
+      ...(isGpt5Model ? { verbosity: 'low' } : {}),
+      format: {
+        type: 'json_schema',
+        name: 'publication_suggestion',
+        strict: true,
+        schema: publicationSuggestionSchema
+      }
+    },
+    ...(isGpt5Model ? { reasoning: { effort: 'minimal' } } : {}),
+    max_output_tokens: 2400
+  };
 
-  const responseJson = (await openAiResponse.json()) as OpenAiResponse;
+  let openAiResponse: Response;
+  try {
+    openAiResponse = await fetch('https://api.openai.com/v1/responses', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(requestBody)
+    });
+  } catch {
+    return NextResponse.json(
+      { error: 'No se pudo conectar con OpenAI. Revisa la conexion del servidor o la configuracion de certificados.' },
+      { status: 503 }
+    );
+  }
+
+  let responseJson: OpenAiResponse;
+  try {
+    responseJson = (await openAiResponse.json()) as OpenAiResponse;
+  } catch {
+    return NextResponse.json({ error: 'OpenAI respondio sin datos legibles. Intenta nuevamente.' }, { status: 502 });
+  }
 
   if (!openAiResponse.ok) {
     return NextResponse.json(
@@ -229,10 +270,24 @@ export async function POST(request: Request) {
     );
   }
 
+  const refusal = getResponseRefusal(responseJson);
+  if (refusal) {
+    return NextResponse.json({ error: 'La IA no pudo analizar esa imagen. Prueba con otra foto.' }, { status: 422 });
+  }
+
+  const responseText = getResponseText(responseJson);
+
   try {
-    const suggestion = normalizeSuggestion(parseJson(getResponseText(responseJson)));
+    const suggestion = normalizeSuggestion(parseJson(responseText));
     return NextResponse.json({ suggestion });
   } catch {
+    if (responseJson.status === 'incomplete') {
+      return NextResponse.json(
+        { error: getIncompleteMessage(responseJson.incomplete_details?.reason) },
+        { status: 502 }
+      );
+    }
+
     return NextResponse.json({ error: 'La IA respondio en un formato inesperado. Intenta con otra foto.' }, { status: 502 });
   }
 }

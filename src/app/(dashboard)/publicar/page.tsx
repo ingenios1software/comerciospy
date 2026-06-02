@@ -15,6 +15,33 @@ type AiResponse = {
   error?: string;
 };
 
+function getFirebasePublishMessage(error: unknown) {
+  const code = typeof error === 'object' && error !== null && 'code' in error ? String(error.code) : '';
+  const message = error instanceof Error ? error.message : '';
+
+  if (code === 'storage/unauthorized') {
+    return 'No tenes permisos para subir la foto. Revisa que las reglas de Storage esten publicadas y que tu usuario este autenticado.';
+  }
+
+  if (code.includes('permission-denied')) {
+    return 'No tenes permisos para crear esta publicacion. Revisa que tu usuario tenga rol comercio y el comercioId correcto.';
+  }
+
+  if (code === 'storage/quota-exceeded') {
+    return 'No se pudo subir la foto porque Firebase Storage supero la cuota disponible.';
+  }
+
+  if (code === 'storage/retry-limit-exceeded') {
+    return 'No se pudo subir la foto por conexion inestable. Intenta nuevamente.';
+  }
+
+  if (message) {
+    return message;
+  }
+
+  return 'No se pudo publicar. Revisa tu conexion o la configuracion de Firebase.';
+}
+
 export default function PublicarPage() {
   const router = useRouter();
   const { user, profile, loading } = useAuth();
@@ -108,7 +135,7 @@ export default function PublicarPage() {
 
     try {
       const id = crypto.randomUUID();
-      const imageUrl = file ? await uploadFile(`publicaciones/${profile?.comercioId ?? user.uid}/${id}`, file) : '';
+      const imageUrl = file ? await uploadFile(`publicaciones/${user.uid}/${id}`, file) : '';
       const comercioId = profile?.comercioId ?? user.uid;
 
       await createPublication({
@@ -126,8 +153,8 @@ export default function PublicarPage() {
       });
 
       router.push('/dashboard');
-    } catch {
-      setError('No se pudo publicar. Revisa tu conexion o la configuracion de Firebase.');
+    } catch (publishError) {
+      setError(getFirebasePublishMessage(publishError));
     } finally {
       setSubmitting(false);
     }
