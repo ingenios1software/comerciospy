@@ -66,7 +66,7 @@ export default function DashboardPage() {
         <Sidebar />
         <div className="mx-auto w-full max-w-5xl px-4 pb-28 pt-24 sm:px-6 lg:px-8 lg:pt-8">
           <div className="space-y-6">
-            <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-glow sm:p-6">
+            <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-glow sm:p-6">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.26em] text-accent">Panel del comercio</p>
@@ -74,11 +74,11 @@ export default function DashboardPage() {
                   <p className="mt-2 text-sm leading-6 text-slate-600">Actualiza tu ficha, carga fotos y publica novedades con ayuda de IA.</p>
                 </div>
                 <div className="flex flex-col gap-2 sm:flex-row">
-                  <Link href="/perfil" className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+                  <Link href="/perfil" className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
                     <Edit3 className="h-4 w-4" />
                     Editar ficha
                   </Link>
-                  <Link href="/publicar" className="inline-flex items-center justify-center gap-2 rounded-2xl bg-accent px-4 py-3 text-sm font-semibold text-white transition hover:bg-red-700">
+                  <Link href="/publicar" className="inline-flex items-center justify-center gap-2 rounded-xl bg-accent px-4 py-3 text-sm font-semibold text-white transition hover:bg-red-700">
                     <PlusCircle className="h-4 w-4" />
                     Publicar
                   </Link>
@@ -87,19 +87,19 @@ export default function DashboardPage() {
             </section>
 
             <section className="grid gap-3 sm:grid-cols-3">
-              <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-soft">
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-soft">
                 <Store className="h-5 w-5 text-accent" />
-                <p className="mt-4 text-sm text-slate-500">Estado</p>
+                <p className="mt-4 text-sm font-semibold text-slate-500">Estado</p>
                 <p className="mt-1 text-2xl font-semibold text-slate-950">{comercio?.activo ? 'Activo' : 'Pendiente'}</p>
               </div>
-              <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-soft">
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-soft">
                 <PlusCircle className="h-5 w-5 text-emerald-600" />
-                <p className="mt-4 text-sm text-slate-500">Publicaciones</p>
+                <p className="mt-4 text-sm font-semibold text-slate-500">Publicaciones</p>
                 <p className="mt-1 text-2xl font-semibold text-slate-950">{publicaciones.length}</p>
               </div>
-              <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-soft">
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-soft">
                 <Sparkles className="h-5 w-5 text-slate-700" />
-                <p className="mt-4 text-sm text-slate-500">Asistente IA</p>
+                <p className="mt-4 text-sm font-semibold text-slate-500">Asistente IA</p>
                 <p className="mt-1 text-2xl font-semibold text-slate-950">Listo</p>
               </div>
             </section>
@@ -107,7 +107,7 @@ export default function DashboardPage() {
             {comercio ? (
               <section className="grid gap-4 lg:grid-cols-[1fr_1.1fr] lg:items-stretch">
                 <DigitalBusinessCard comercio={comercio} />
-                <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-soft">
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-soft">
                   <p className="text-lg font-semibold text-slate-950">Tu ficha es tu tarjeta</p>
                   <p className="mt-3 text-sm leading-6 text-slate-600">
                     Usa este enlace para presentarte en WhatsApp, estados, redes sociales o mensajes directos. Cada cliente abre tu ficha con telefono, ubicacion, horario, fotos y publicaciones.

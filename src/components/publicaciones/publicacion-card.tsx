@@ -19,7 +19,7 @@ export function PublicacionCard({ publicacion }: { publicacion: Publicacion }) {
 
   return (
     <>
-      <article className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-soft transition hover:border-slate-300">
+      <article className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-soft transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-glow">
         <div className="aspect-[4/3] overflow-hidden bg-slate-100">
           {publicacion.imagenUrl ? (
             <button
@@ -31,15 +31,17 @@ export function PublicacionCard({ publicacion }: { publicacion: Publicacion }) {
               <img src={publicacion.imagenUrl} alt={publicacion.titulo} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
             </button>
           ) : (
-            <div className="flex h-full items-center justify-center text-slate-400">
+          <div className="flex h-full items-center justify-center bg-slate-100 text-slate-400">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white shadow-soft">
               <BadgePercent className="h-6 w-6" />
             </div>
-          )}
-        </div>
-        <div className="space-y-3 p-4">
-          <div className="flex items-center justify-between gap-3 text-xs font-semibold uppercase tracking-[0.18em] text-accent">
-            <span>{publicacion.tipo}</span>
-            <span>{publicacion.ciudad}</span>
+          </div>
+        )}
+      </div>
+      <div className="space-y-3 p-4">
+          <div className="flex items-center justify-between gap-3 text-xs font-semibold">
+            <span className="rounded-full bg-red-50 px-2.5 py-1 uppercase tracking-[0.14em] text-accent ring-1 ring-red-100">{publicacion.tipo}</span>
+            <span className="truncate text-slate-500">{publicacion.ciudad}</span>
           </div>
           <div>
             <h3 className="line-clamp-2 text-base font-semibold text-slate-950">{publicacion.titulo}</h3>

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { Home, List, LogOut, PlusCircle, Store, User, Users } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/firebase/auth-context';
 
 type NavigationItem = {
@@ -14,6 +14,7 @@ type NavigationItem = {
 export function BottomNavigation() {
   const { user, profile, loading, logout } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   const handleLogout = async () => {
     await logout();
@@ -45,14 +46,23 @@ export function BottomNavigation() {
         { label: 'Comercio', href: '/login', icon: Store }
       ];
   const showLogout = !loading && Boolean(user);
+  const isActive = (href: string) => (href === '/' ? pathname === '/' : pathname.startsWith(href));
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 px-3 py-2 backdrop-blur-xl sm:hidden">
+    <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200/80 bg-white/95 px-3 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pt-2 shadow-[0_-12px_30px_rgba(15,23,42,0.06)] backdrop-blur-xl sm:hidden">
       <div className="mx-auto flex max-w-6xl items-center justify-between">
         {items.map((item) => {
           const Icon = item.icon;
+          const active = isActive(item.href);
           return (
-            <Link key={item.href} href={item.href} className="flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-xl px-2 py-2 text-[11px] font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-950">
+            <Link
+              key={item.href}
+              href={item.href}
+              aria-current={active ? 'page' : undefined}
+              className={`flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-xl px-2 py-2 text-[11px] font-semibold transition ${
+                active ? 'bg-slate-950 text-white shadow-soft' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950'
+              }`}
+            >
               <Icon className="h-4 w-4" />
               <span className="truncate">{item.label}</span>
             </Link>

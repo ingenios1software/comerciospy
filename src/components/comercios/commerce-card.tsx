@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ArrowUpRight, Clock, Images, MapPin, MessageCircle, Phone } from 'lucide-react';
+import { ArrowUpRight, Clock, Images, MapPin, MessageCircle, Phone, Store } from 'lucide-react';
 import type { Comercio, CommercePreview } from '@/types';
 import { buildMapsUrl, buildWhatsappUrl, cleanPhone } from '@/lib/utils/format';
 
@@ -27,12 +27,19 @@ export function CommerceCard({ comercio }: CommerceCardProps) {
   const whatsappUrl = buildWhatsappUrl(comercio.whatsapp, `Hola, vi ${comercio.nombre} en ComerciosPY y quiero consultar.`);
   const mapsUrl = buildMapsUrl(comercio);
   const telUrl = cleanPhone(telefono) ? `tel:${cleanPhone(telefono)}` : '#';
+  const mainImage = getMainImage(comercio);
 
   return (
-    <article className="rounded-2xl border border-slate-200 bg-white p-3 shadow-soft transition hover:border-slate-300">
+    <article className="rounded-2xl border border-slate-200 bg-white p-3 shadow-soft transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-glow">
       <div className="grid grid-cols-[76px_1fr] gap-3 sm:grid-cols-[96px_1fr_auto] sm:items-center">
         <Link href={`/comercios/${comercio.id}`} className="group relative h-24 overflow-hidden rounded-xl bg-slate-100 sm:h-24">
-          <img src={getMainImage(comercio)} alt={comercio.nombre} className="h-full w-full object-cover transition duration-300 group-hover:scale-105" />
+          {mainImage ? (
+            <img src={mainImage} alt={comercio.nombre} className="h-full w-full object-cover transition duration-300 group-hover:scale-105" />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center bg-slate-100 text-slate-400">
+              <Store className="h-6 w-6" />
+            </div>
+          )}
           <span className="absolute bottom-1 left-1 inline-flex items-center gap-1 rounded-full bg-white/90 px-2 py-1 text-[11px] font-semibold text-slate-700 shadow-sm">
             <Images className="h-3 w-3" />
             {photos.length}
@@ -41,7 +48,7 @@ export function CommerceCard({ comercio }: CommerceCardProps) {
 
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-accent">{comercio.categoria}</span>
+            <span className="rounded-full bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-accent ring-1 ring-red-100">{comercio.categoria}</span>
             <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-600">{comercio.ciudad}</span>
           </div>
           <Link href={`/comercios/${comercio.id}`} className="mt-2 block">
@@ -59,15 +66,15 @@ export function CommerceCard({ comercio }: CommerceCardProps) {
           </div>
 
           <div className="mt-3 grid grid-cols-3 gap-2 sm:hidden">
-            <a href={telUrl} className="inline-flex h-10 items-center justify-center gap-1 rounded-xl bg-slate-100 text-xs font-semibold text-slate-700" aria-label={`Llamar a ${comercio.nombre}`}>
+            <a href={telUrl} className="inline-flex h-10 items-center justify-center gap-1 rounded-xl bg-slate-100 text-xs font-semibold text-slate-700 transition active:scale-[0.98]" aria-label={`Llamar a ${comercio.nombre}`}>
               <Phone className="h-4 w-4" />
               Llamar
             </a>
-            <a href={whatsappUrl} target="_blank" rel="noreferrer" className="inline-flex h-10 items-center justify-center gap-1 rounded-xl bg-emerald-600 text-xs font-semibold text-white" aria-label={`WhatsApp de ${comercio.nombre}`}>
+            <a href={whatsappUrl} target="_blank" rel="noreferrer" className="inline-flex h-10 items-center justify-center gap-1 rounded-xl bg-emerald-600 text-xs font-semibold text-white transition active:scale-[0.98]" aria-label={`WhatsApp de ${comercio.nombre}`}>
               <MessageCircle className="h-4 w-4" />
               Chat
             </a>
-            <a href={mapsUrl} target="_blank" rel="noreferrer" className="inline-flex h-10 items-center justify-center gap-1 rounded-xl bg-slate-950 text-xs font-semibold text-white" aria-label={`Ubicacion de ${comercio.nombre}`}>
+            <a href={mapsUrl} target="_blank" rel="noreferrer" className="inline-flex h-10 items-center justify-center gap-1 rounded-xl bg-slate-950 text-xs font-semibold text-white transition active:scale-[0.98]" aria-label={`Ubicacion de ${comercio.nombre}`}>
               <MapPin className="h-4 w-4" />
               Mapa
             </a>

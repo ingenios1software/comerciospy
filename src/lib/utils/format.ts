@@ -15,8 +15,21 @@ export const buildWhatsappUrl = (phone?: string | null, message?: string) => {
   return clean ? `https://wa.me/${clean}${suffix}` : '#';
 };
 
-export const buildMapsUrl = (comercio: { ubicacionUrl?: string; direccion?: string; ciudad?: string; nombre?: string }) => {
+export const buildMapsUrl = (comercio: {
+  ubicacionUrl?: string;
+  ubicacion?: {
+    lat?: number;
+    lng?: number;
+  };
+  direccion?: string;
+  ciudad?: string;
+  nombre?: string;
+}) => {
   if (comercio.ubicacionUrl) return comercio.ubicacionUrl;
+  if (Number.isFinite(comercio.ubicacion?.lat) && Number.isFinite(comercio.ubicacion?.lng)) {
+    return `https://www.google.com/maps/search/?api=1&query=${comercio.ubicacion?.lat},${comercio.ubicacion?.lng}`;
+  }
+
   const query = [comercio.nombre, comercio.direccion, comercio.ciudad].filter(Boolean).join(' ');
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
 };

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { LogOut, MessageCircle } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/firebase/auth-context';
 import { adminContactMessage, adminWhatsapp } from '@/lib/admin-contact';
 import { buildWhatsappUrl } from '@/lib/utils/format';
@@ -12,6 +12,7 @@ import { developerBrand } from '@/lib/brand';
 export function Navbar() {
   const { user, loading, logout } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   const handleLogout = async () => {
     await logout();
@@ -31,16 +32,29 @@ export function Navbar() {
         { label: 'Buscar gratis', href: '/comercios' },
         { label: 'Panel comercio', href: '/login' }
       ];
+  const isActive = (href: string) => (href === '/' ? pathname === '/' : pathname.startsWith(href));
 
   return (
-    <nav className="fixed inset-x-0 top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur-xl">
+    <nav className="fixed inset-x-0 top-0 z-20 border-b border-slate-200/80 bg-white/90 shadow-[0_10px_30px_rgba(15,23,42,0.04)] backdrop-blur-xl">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
-        <Link href="/" className="text-lg font-semibold text-slate-950">
-          ComerciosPY <span className="hidden text-xs font-medium text-slate-500 sm:inline">by {developerBrand}</span>
+        <Link href="/" className="inline-flex items-center gap-2 text-lg font-semibold text-slate-950">
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-950 text-sm font-black text-white">CP</span>
+          <span>
+            ComerciosPY <span className="hidden text-xs font-medium text-slate-500 sm:inline">by {developerBrand}</span>
+          </span>
         </Link>
         <div className="hidden items-center gap-2 sm:flex">
           {navItems.map((item) => (
-            <Link key={item.href} href={item.href} className="rounded-xl px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-950">
+            <Link
+              key={item.href}
+              href={item.href}
+              aria-current={isActive(item.href) ? 'page' : undefined}
+              className={`rounded-xl px-3 py-2 text-sm font-semibold transition ${
+                isActive(item.href)
+                  ? 'bg-slate-950 text-white shadow-soft'
+                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950'
+              }`}
+            >
               {item.label}
             </Link>
           ))}

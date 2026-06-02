@@ -92,8 +92,8 @@ export default function ComerciosPage() {
         <section className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.26em] text-accent">Guia completa</p>
-            <h1 className="mt-2 text-3xl font-semibold sm:text-4xl">Buscar comercios y servicios gratis</h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">No necesitas cuenta para encontrar contactos por ciudad, rubro, categoria, WhatsApp y ubicacion.</p>
+            <h1 className="mt-2 text-3xl font-semibold sm:text-4xl">Explorar comercios y servicios</h1>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">Filtra contactos por ciudad, rubro, categoria, WhatsApp y ubicacion sin crear cuenta.</p>
           </div>
           <a
             href={buildWhatsappUrl(adminWhatsapp, adminContactMessage)}
@@ -114,7 +114,11 @@ export default function ComerciosPage() {
             placeholder="Buscar por nombre, rubro o direccion"
             buttonLabel="Buscar"
           />
-          <div className="space-y-4 rounded-3xl border border-slate-200 bg-white p-4 shadow-soft">
+          <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-soft">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm font-semibold text-slate-950">Filtros</p>
+              <span className="text-xs font-semibold text-slate-500">{filteredComercios.length} resultados</span>
+            </div>
             <div>
               <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Ciudad</p>
               <CategoryPills categories={cityOptions} selectedCategory={selectedCity} onSelectCategory={handleSelectCity} />

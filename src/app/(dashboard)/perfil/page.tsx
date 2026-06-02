@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ImagePlus, Save } from 'lucide-react';
+import { ExternalLink, ImagePlus, Loader2, MapPin, Navigation, Save } from 'lucide-react';
 import { Sidebar } from '@/components/layout/sidebar';
 import { ImageLightbox, type LightboxImage } from '@/components/ui/image-lightbox';
 import { useAuth } from '@/lib/firebase/auth-context';
@@ -39,6 +39,75 @@ type ProfileFormData = {
 
 function clean(value: string) {
   return value.trim();
+}
+
+function normalizeCoordinateInput(value: string) {
+  return value.trim().replace(',', '.');
+}
+
+function parseCoordinate(value: string) {
+  const parsed = Number(normalizeCoordinateInput(value));
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function isValidCoordinates(lat: number | null, lng: number | null) {
+  return lat !== null && lng !== null && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
+}
+
+function getValidCoordinates(latValue: string, lngValue: string) {
+  const lat = parseCoordinate(latValue);
+  const lng = parseCoordinate(lngValue);
+
+  return isValidCoordinates(lat, lng) && lat !== null && lng !== null ? { lat, lng } : null;
+}
+
+function isUsableSavedCoordinates(lat?: number, lng?: number) {
+  return Number.isFinite(lat) && Number.isFinite(lng) && !(lat === 0 && lng === 0);
+}
+
+function formatCoordinate(value: number) {
+  return value.toFixed(6).replace(/\.?0+$/, '');
+}
+
+function buildCoordinateMapsUrl(lat: number, lng: number) {
+  return `https://www.google.com/maps/search/?api=1&query=${formatCoordinate(lat)},${formatCoordinate(lng)}`;
+}
+
+function parseCoordinatesFromText(value: string) {
+  const text = decodeURIComponent(value.trim());
+  const patterns = [
+    /@(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)/,
+    /[?&](?:q|query)=(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)/,
+    /!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/,
+    /(-?\d{1,2}\.\d+),\s*(-?\d{1,3}\.\d+)/
+  ];
+
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (!match) continue;
+
+    const lat = Number(match[1]);
+    const lng = Number(match[2]);
+    if (isValidCoordinates(lat, lng)) return { lat, lng };
+  }
+
+  return null;
+}
+
+function getGeolocationErrorMessage(error: GeolocationPositionError) {
+  if (error.code === error.PERMISSION_DENIED) {
+    return 'El celular no dio permiso para usar la ubicacion. Activa el permiso del navegador e intenta de nuevo.';
+  }
+
+  if (error.code === error.POSITION_UNAVAILABLE) {
+    return 'No pudimos detectar la ubicacion actual. Intenta al aire libre o carga el link de Google Maps.';
+  }
+
+  if (error.code === error.TIMEOUT) {
+    return 'La ubicacion tardo demasiado. Intenta nuevamente o carga el link de Google Maps.';
+  }
+
+  return 'No pudimos obtener la ubicacion actual.';
 }
 
 function getFirebaseSaveMessage(error: unknown) {
@@ -79,6 +148,8 @@ export default function PerfilPage() {
   const [whatsapp, setWhatsapp] = useState('');
   const [horario, setHorario] = useState('');
   const [ubicacionUrl, setUbicacionUrl] = useState('');
+  const [ubicacionLat, setUbicacionLat] = useState('');
+  const [ubicacionLng, setUbicacionLng] = useState('');
   const [servicios, setServicios] = useState('');
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [portadaFile, setPortadaFile] = useState<File | null>(null);
@@ -87,6 +158,7 @@ export default function PerfilPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [locating, setLocating] = useState(false);
 
   const comercioId = profile?.comercioId ?? user?.uid;
   const photoLightboxItems = useMemo<LightboxImage[]>(
@@ -117,6 +189,14 @@ export default function PerfilPage() {
           setWhatsapp(data.whatsapp);
           setHorario(data.horario);
           setUbicacionUrl(data.ubicacionUrl ?? '');
+          if (isUsableSavedCoordinates(data.ubicacion?.lat, data.ubicacion?.lng)) {
+            setUbicacionLat(formatCoordinate(data.ubicacion.lat));
+            setUbicacionLng(formatCoordinate(data.ubicacion.lng));
+          } else {
+            const parsedCoordinates = parseCoordinatesFromText(data.ubicacionUrl ?? '');
+            setUbicacionLat(parsedCoordinates ? formatCoordinate(parsedCoordinates.lat) : '');
+            setUbicacionLng(parsedCoordinates ? formatCoordinate(parsedCoordinates.lng) : '');
+          }
           setServicios((data.servicios ?? []).join(', '));
         }
       } catch {
@@ -126,6 +206,74 @@ export default function PerfilPage() {
 
     loadCommerce();
   }, [comercioId]);
+
+  const currentLocationUrl = useMemo(() => {
+    if (ubicacionUrl.trim()) return ubicacionUrl.trim();
+
+    const coordinates = getValidCoordinates(ubicacionLat, ubicacionLng);
+    return coordinates ? buildCoordinateMapsUrl(coordinates.lat, coordinates.lng) : '';
+  }, [ubicacionLat, ubicacionLng, ubicacionUrl]);
+
+  const syncCoordinates = (lat: number, lng: number) => {
+    setUbicacionLat(formatCoordinate(lat));
+    setUbicacionLng(formatCoordinate(lng));
+    setUbicacionUrl(buildCoordinateMapsUrl(lat, lng));
+  };
+
+  const handleLocationUrlChange = (value: string) => {
+    setUbicacionUrl(value);
+    const coordinates = parseCoordinatesFromText(value);
+    if (coordinates) syncCoordinates(coordinates.lat, coordinates.lng);
+  };
+
+  const handleCoordinateChange = (nextLat: string, nextLng: string) => {
+    setUbicacionLat(nextLat);
+    setUbicacionLng(nextLng);
+
+    const coordinates = getValidCoordinates(nextLat, nextLng);
+    if (coordinates) {
+      setUbicacionUrl(buildCoordinateMapsUrl(coordinates.lat, coordinates.lng));
+    }
+  };
+
+  const handleUseCurrentLocation = () => {
+    setError(null);
+    setSuccess(null);
+
+    if (typeof window === 'undefined' || !navigator.geolocation) {
+      setError('Este navegador no permite obtener la ubicacion actual.');
+      return;
+    }
+
+    if (!window.isSecureContext) {
+      setError('Para usar la ubicacion actual desde el celular, abre la app en HTTPS.');
+      return;
+    }
+
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        syncCoordinates(position.coords.latitude, position.coords.longitude);
+        setSuccess('Ubicacion detectada. Guarda la ficha para publicarla.');
+        setLocating(false);
+      },
+      (geoError) => {
+        setError(getGeolocationErrorMessage(geoError));
+        setLocating(false);
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 60_000,
+        timeout: 15_000
+      }
+    );
+  };
+
+  const handleClearLocation = () => {
+    setUbicacionLat('');
+    setUbicacionLng('');
+    setUbicacionUrl('');
+  };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -153,6 +301,16 @@ export default function PerfilPage() {
       ubicacionUrl: clean(ubicacionUrl),
       servicios
     };
+    const hasLocationInput = Boolean(ubicacionLat.trim() || ubicacionLng.trim());
+    const ubicacion = getValidCoordinates(ubicacionLat, ubicacionLng);
+
+    if (hasLocationInput && !ubicacion) {
+      setError('Revisa las coordenadas de ubicacion.');
+      setSaving(false);
+      return;
+    }
+
+    const locationUrl = formData.ubicacionUrl || (ubicacion ? buildCoordinateMapsUrl(ubicacion.lat, ubicacion.lng) : '');
 
     const missingFields = requiredProfileFields
       .filter((field) => !field.value(formData))
@@ -190,7 +348,8 @@ export default function PerfilPage() {
         telefono: formData.telefono,
         whatsapp: formData.whatsapp,
         horario: formData.horario,
-        ubicacionUrl: formData.ubicacionUrl,
+        ubicacionUrl: locationUrl,
+        ...(ubicacion ? { ubicacion } : {}),
         fotos,
         servicios: formData.servicios
           .split(',')
@@ -283,7 +442,67 @@ export default function PerfilPage() {
                 <Field id="direccion" label="Direccion" value={direccion} onChange={setDireccion} required />
               </div>
 
-              <Field id="ubicacionUrl" label="Link de Google Maps" value={ubicacionUrl} onChange={setUbicacionUrl} placeholder="https://www.google.com/maps/..." />
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4 text-accent" />
+                      <p className="text-sm font-semibold text-slate-950">Ubicacion del negocio</p>
+                    </div>
+                    <p className="mt-1 text-xs leading-5 text-slate-500">GPS del celular, link de Maps o coordenadas manuales.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleUseCurrentLocation}
+                    disabled={locating}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {locating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Navigation className="h-4 w-4" />}
+                    {locating ? 'Detectando...' : 'Usar ubicacion actual'}
+                  </button>
+                </div>
+
+                <div className="mt-4 space-y-4">
+                  <Field id="ubicacionUrl" label="Link de Google Maps" value={ubicacionUrl} onChange={handleLocationUrlChange} placeholder="https://www.google.com/maps/..." />
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Field
+                      id="ubicacionLat"
+                      label="Latitud"
+                      value={ubicacionLat}
+                      onChange={(value) => handleCoordinateChange(value, ubicacionLng)}
+                      placeholder="-25.2867"
+                    />
+                    <Field
+                      id="ubicacionLng"
+                      label="Longitud"
+                      value={ubicacionLng}
+                      onChange={(value) => handleCoordinateChange(ubicacionLat, value)}
+                      placeholder="-57.3333"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    {currentLocationUrl ? (
+                      <a
+                        href={currentLocationUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                        Ver en Maps
+                      </a>
+                    ) : null}
+                    <button
+                      type="button"
+                      onClick={handleClearLocation}
+                      className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                    >
+                      Limpiar ubicacion
+                    </button>
+                  </div>
+                </div>
+              </div>
+
               <Field id="resumen" label="Resumen corto" value={resumen} onChange={setResumen} placeholder="Una frase corta para el listado" />
               <Field id="servicios" label="Servicios separados por coma" value={servicios} onChange={setServicios} placeholder="Delivery, reservas, reparaciones" />
 

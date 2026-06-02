@@ -90,14 +90,14 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-surface px-4 pb-28 pt-20 text-slate-950 sm:px-6">
       <div className="mx-auto max-w-6xl space-y-6">
-        <section className="grid gap-4 pt-1 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
+        <section className="grid gap-4 pt-1 lg:grid-cols-[1.15fr_0.85fr] lg:items-end">
           <div className="space-y-3">
             <p className="text-xs font-semibold uppercase tracking-[0.26em] text-accent">ComerciosPY</p>
-            <h1 className="max-w-3xl text-2xl font-semibold leading-tight sm:text-5xl">
-              Busca gratis negocios, servicios y contactos por ciudad.
+            <h1 className="max-w-3xl text-3xl font-semibold leading-tight sm:text-5xl">
+              Directorio local para encontrar y contactar comercios en minutos.
             </h1>
             <p className="max-w-2xl text-sm leading-6 text-slate-600 sm:text-base">
-              No necesitas cuenta para encontrar comercios, profesionales o prestadores de servicios para viviendas y otros rubros.
+              Busca por ciudad, rubro o categoria. Abri WhatsApp, llama o mira la ubicacion sin registrarte.
             </p>
             <div className="flex flex-wrap gap-2">
               {['Gratis', 'Sin registro', 'WhatsApp directo', 'Filtro por ciudad'].map((item) => (
@@ -106,9 +106,21 @@ export default function Home() {
                 </span>
               ))}
             </div>
+            <div className="grid max-w-xl grid-cols-3 gap-2 pt-2">
+              {[
+                { label: 'Comercios', value: visibleComercios.length },
+                { label: 'Ciudades', value: cityOptions.length },
+                { label: 'Novedades', value: publicaciones.length }
+              ].map((item) => (
+                <div key={item.label} className="rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-soft">
+                  <p className="text-lg font-semibold text-slate-950">{item.value}</p>
+                  <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">{item.label}</p>
+                </div>
+              ))}
+            </div>
           </div>
 
-          <div className="hidden rounded-3xl border border-slate-200 bg-white p-4 shadow-glow lg:block">
+          <div className="hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-glow lg:block">
             <div className="flex items-start gap-3">
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-red-50 text-accent">
                 <Search className="h-5 w-5" />
@@ -143,7 +155,11 @@ export default function Home() {
             placeholder="Buscar negocio, rubro o direccion"
             buttonLabel="Ir"
           />
-          <div className="space-y-4 rounded-3xl border border-slate-200 bg-white p-4 shadow-soft">
+          <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-soft">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm font-semibold text-slate-950">Filtros rapidos</p>
+              <span className="text-xs font-semibold text-slate-500">{visibleComercios.length} resultados</span>
+            </div>
             <div>
               <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Ciudad</p>
               <CategoryPills categories={cityOptions} selectedCategory={selectedCity} onSelectCategory={setSelectedCity} />

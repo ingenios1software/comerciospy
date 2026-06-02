@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { LayoutDashboard, LogOut, Map, PlusCircle, Store, User, Users } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/firebase/auth-context';
 
 const sidebarItems = [
@@ -17,6 +17,7 @@ const adminSidebarItems = [{ label: 'Usuarios', href: '/admin/usuarios', icon: U
 export function Sidebar() {
   const { user, profile, loading, logout } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   const handleLogout = async () => {
     await logout();
@@ -24,9 +25,9 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="hidden h-full w-72 shrink-0 border-r border-slate-200 bg-white p-4 lg:block">
-      <div className="space-y-4">
-        <div className="rounded-2xl bg-slate-50 p-4">
+    <aside className="hidden h-full w-72 shrink-0 border-r border-slate-200/80 bg-white/90 p-4 backdrop-blur-xl lg:block">
+      <div className="sticky top-4 space-y-4">
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-accent">Panel</p>
           <h2 className="mt-2 text-xl font-semibold text-slate-950">ComerciosPY</h2>
           {user ? (
@@ -41,8 +42,16 @@ export function Sidebar() {
         <nav className="space-y-2">
           {[...sidebarItems, ...(profile?.rol === 'superadmin' ? adminSidebarItems : [])].map((item) => {
             const Icon = item.icon;
+            const active = pathname.startsWith(item.href);
             return (
-              <Link key={item.href} href={item.href} className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-950">
+              <Link
+                key={item.href}
+                href={item.href}
+                aria-current={active ? 'page' : undefined}
+                className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold transition ${
+                  active ? 'bg-slate-950 text-white shadow-soft' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950'
+                }`}
+              >
                 <Icon className="h-4 w-4" />
                 {item.label}
               </Link>
