@@ -13,6 +13,8 @@ type OpenAiResponse = {
   }>;
   error?: {
     message?: string;
+    code?: string;
+    type?: string;
   };
 };
 
@@ -115,6 +117,27 @@ function normalizeSuggestion(value: Partial<AiPublicationSuggestion>): AiPublica
   };
 }
 
+function getOpenAiErrorMessage(status: number, error?: OpenAiResponse['error']) {
+  const message = error?.message ?? '';
+  const code = error?.code ?? '';
+  const type = error?.type ?? '';
+  const searchable = `${message} ${code} ${type}`.toLowerCase();
+
+  if (status === 429 && (searchable.includes('quota') || searchable.includes('billing'))) {
+    return 'La cuenta de OpenAI no tiene creditos disponibles o alcanzo su limite mensual. Revisa Billing/Usage en OpenAI, agrega credito o aumenta el limite y vuelve a probar.';
+  }
+
+  if (status === 429) {
+    return 'OpenAI esta limitando las solicitudes por uso alto. Espera unos minutos y vuelve a probar.';
+  }
+
+  if (status === 401) {
+    return 'La API key de OpenAI no es valida o fue revocada. Revisa OPENAI_API_KEY en Vercel.';
+  }
+
+  return message || 'No se pudo generar la sugerencia con IA.';
+}
+
 export async function POST(request: Request) {
   const apiKey = process.env.OPENAI_API_KEY;
 
@@ -201,7 +224,7 @@ export async function POST(request: Request) {
 
   if (!openAiResponse.ok) {
     return NextResponse.json(
-      { error: responseJson.error?.message ?? 'No se pudo generar la sugerencia con IA.' },
+      { error: getOpenAiErrorMessage(openAiResponse.status, responseJson.error) },
       { status: openAiResponse.status }
     );
   }
