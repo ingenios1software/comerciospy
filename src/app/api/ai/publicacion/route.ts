@@ -24,6 +24,7 @@ type OpenAiResponse = {
 };
 
 const allowedTipos = ['producto', 'servicio', 'oferta', 'novedad'] as const;
+const allowedImageTypes = ['image/jpeg', 'image/png', 'image/webp'];
 const allowedCategories = [
   'Comida',
   'Bebidas',
@@ -181,6 +182,10 @@ export async function POST(request: Request) {
 
   if (!image.type.startsWith('image/')) {
     return NextResponse.json({ error: 'El archivo debe ser una imagen.' }, { status: 400 });
+  }
+
+  if (!allowedImageTypes.includes(image.type)) {
+    return NextResponse.json({ error: 'La IA solo puede analizar imagenes JPG, PNG o WebP.' }, { status: 400 });
   }
 
   if (image.size > 8 * 1024 * 1024) {

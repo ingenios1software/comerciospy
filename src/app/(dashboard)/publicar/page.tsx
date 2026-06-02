@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ImagePlus, Loader2, Send, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -14,6 +14,109 @@ type AiResponse = {
   suggestion?: AiPublicationSuggestion;
   error?: string;
 };
+
+const supportedPublicationImageTypes = ['image/jpeg', 'image/png', 'image/webp'];
+const supportedPublicationImageExtensions = ['.jpg', '.jpeg', '.png', '.webp'];
+const maxAiImageBytes = 8 * 1024 * 1024;
+const maxPublicationImageDimension = 1600;
+const publicationImageQuality = 0.86;
+
+function getFileExtension(fileName: string) {
+  const match = fileName.toLowerCase().match(/\.[^.]+$/);
+  return match?.[0] ?? '';
+}
+
+function isHeicImage(file: File) {
+  const extension = getFileExtension(file.name);
+  return file.type === 'image/heic' || file.type === 'image/heif' || extension === '.heic' || extension === '.heif';
+}
+
+function isSupportedPublicationImage(file: File) {
+  const extension = getFileExtension(file.name);
+  return supportedPublicationImageTypes.includes(file.type) || supportedPublicationImageExtensions.includes(extension);
+}
+
+function loadImage(file: File) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new Image();
+    const imageUrl = URL.createObjectURL(file);
+
+    image.onload = () => {
+      URL.revokeObjectURL(imageUrl);
+      resolve(image);
+    };
+
+    image.onerror = () => {
+      URL.revokeObjectURL(imageUrl);
+      reject(new Error('No pudimos leer esta foto. Usa JPG, PNG o WebP.'));
+    };
+
+    image.src = imageUrl;
+  });
+}
+
+function getResizedDimensions(width: number, height: number) {
+  const largestSide = Math.max(width, height);
+  const scale = largestSide > maxPublicationImageDimension ? maxPublicationImageDimension / largestSide : 1;
+
+  return {
+    width: Math.max(1, Math.round(width * scale)),
+    height: Math.max(1, Math.round(height * scale))
+  };
+}
+
+function canvasToJpegBlob(canvas: HTMLCanvasElement) {
+  return new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => {
+        if (blob) {
+          resolve(blob);
+        } else {
+          reject(new Error('No pudimos preparar esta foto. Usa JPG, PNG o WebP.'));
+        }
+      },
+      'image/jpeg',
+      publicationImageQuality
+    );
+  });
+}
+
+async function preparePublicationImage(file: File) {
+  if (isHeicImage(file)) {
+    throw new Error('Ese formato de foto no es compatible. En iPhone, cambia la camara a JPG o elegi una foto JPG, PNG o WebP.');
+  }
+
+  if (!isSupportedPublicationImage(file)) {
+    throw new Error('Formato no compatible. Usa una foto JPG, PNG o WebP.');
+  }
+
+  const image = await loadImage(file);
+  const size = getResizedDimensions(image.naturalWidth, image.naturalHeight);
+  const canvas = document.createElement('canvas');
+  canvas.width = size.width;
+  canvas.height = size.height;
+
+  const context = canvas.getContext('2d');
+  if (!context) {
+    throw new Error('No pudimos preparar esta foto. Intenta con otra imagen.');
+  }
+
+  context.fillStyle = '#ffffff';
+  context.fillRect(0, 0, size.width, size.height);
+  context.drawImage(image, 0, 0, size.width, size.height);
+
+  const blob = await canvasToJpegBlob(canvas);
+  if (blob.size > maxAiImageBytes) {
+    throw new Error('La foto sigue siendo muy pesada. Intenta con otra imagen mas liviana.');
+  }
+
+  const fileName = `${file.name.replace(/\.[^.]+$/, '') || 'publicacion'}.jpg`;
+
+  return new File([blob], fileName, {
+    type: 'image/jpeg',
+    lastModified: Date.now()
+  });
+}
 
 function getFirebasePublishMessage(error: unknown) {
   const code = typeof error === 'object' && error !== null && 'code' in error ? String(error.code) : '';
@@ -57,6 +160,7 @@ export default function PublicarPage() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
+  const [preparingImage, setPreparingImage] = useState(false);
 
   useEffect(() => {
     const loadCommerce = async () => {
@@ -119,6 +223,31 @@ export default function PublicarPage() {
       setError(err instanceof Error ? err.message : 'No se pudo analizar la foto.');
     } finally {
       setAnalyzing(false);
+    }
+  };
+
+  const handleImageChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = event.target.files?.[0] ?? null;
+
+    setError(null);
+    setAiSuggestion(null);
+
+    if (!selectedFile) {
+      setFile(null);
+      return;
+    }
+
+    setPreparingImage(true);
+
+    try {
+      const preparedFile = await preparePublicationImage(selectedFile);
+      setFile(preparedFile);
+    } catch (imageError) {
+      setFile(null);
+      event.target.value = '';
+      setError(imageError instanceof Error ? imageError.message : 'No pudimos preparar esta foto.');
+    } finally {
+      setPreparingImage(false);
     }
   };
 
@@ -205,23 +334,25 @@ export default function PublicarPage() {
                 Foto
               </label>
               <label htmlFor="imagen" className="flex cursor-pointer flex-col items-center justify-center rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-5 text-center transition hover:border-accent hover:bg-red-50/40">
-                {previewUrl ? (
+                {preparingImage ? (
+                  <>
+                    <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+                    <span className="mt-3 text-sm font-semibold text-slate-700">Preparando foto...</span>
+                  </>
+                ) : previewUrl ? (
                   <img src={previewUrl} alt="Vista previa" className="max-h-72 w-full rounded-2xl object-cover" />
                 ) : (
                   <>
                     <ImagePlus className="h-8 w-8 text-slate-400" />
                     <span className="mt-3 text-sm font-semibold text-slate-700">Subir foto del producto o servicio</span>
-                    <span className="mt-1 text-xs text-slate-500">JPG, PNG o WebP hasta 8 MB para IA.</span>
+                    <span className="mt-1 text-xs text-slate-500">JPG, PNG o WebP. La app reduce fotos grandes.</span>
                   </>
                 )}
                 <input
                   id="imagen"
                   type="file"
-                  accept="image/*"
-                  onChange={(event) => {
-                    setFile(event.target.files?.[0] ?? null);
-                    setAiSuggestion(null);
-                  }}
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={handleImageChange}
                   className="sr-only"
                 />
               </label>
@@ -230,11 +361,11 @@ export default function PublicarPage() {
             <button
               type="button"
               onClick={handleAnalyze}
-              disabled={analyzing || !file}
+              disabled={analyzing || preparingImage || !file}
               className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {analyzing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-              {analyzing ? 'Analizando foto...' : 'Mejorar con IA'}
+              {analyzing ? 'Analizando foto...' : 'Generar texto con IA'}
             </button>
 
             <div>
@@ -321,7 +452,7 @@ export default function PublicarPage() {
             <button
               type="submit"
               className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-accent px-5 py-4 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-70"
-              disabled={submitting}
+              disabled={submitting || preparingImage}
             >
               <Send className="h-4 w-4" />
               {submitting ? 'Publicando...' : 'Publicar ahora'}
