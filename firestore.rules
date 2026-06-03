@@ -17,6 +17,12 @@ service cloud.firestore {
       return isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.comercioId == comercioId && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.rol == 'comercio';
     }
 
+    function hasUsableSubscription(userId) {
+      let profile = get(/databases/$(database)/documents/users/$(userId)).data;
+      return !(profile.suscripcionEstado in ['expired', 'cancelled'])
+        && (!('suscripcionVenceAt' in profile) || profile.suscripcionVenceAt > request.time);
+    }
+
     function isValidOwnProfileCreate(userId) {
       return isAuthenticated()
         && request.auth.uid == userId
@@ -44,14 +50,14 @@ service cloud.firestore {
 
     match /comercios/{comercioId} {
       allow read: if resource.data.activo == true || isComercioOwner(comercioId) || isAdmin();
-      allow create: if isComercioOwner(comercioId) || isSuperAdmin();
-      allow update, delete: if isComercioOwner(comercioId) || isAdmin();
+      allow create: if (isComercioOwner(comercioId) && hasUsableSubscription(request.auth.uid)) || isSuperAdmin();
+      allow update, delete: if (isComercioOwner(comercioId) && hasUsableSubscription(request.auth.uid)) || isAdmin();
     }
 
     match /publicaciones/{publicacionId} {
       allow read: if resource.data.activo == true;
-      allow create: if isComercioOwner(request.resource.data.comercioId) || isSuperAdmin();
-      allow update, delete: if isComercioOwner(resource.data.comercioId) || isAdmin();
+      allow create: if (isComercioOwner(request.resource.data.comercioId) && hasUsableSubscription(request.auth.uid)) || isSuperAdmin();
+      allow update, delete: if (isComercioOwner(resource.data.comercioId) && hasUsableSubscription(request.auth.uid)) || isAdmin();
     }
 
     match /categorias/{categoriaId} {

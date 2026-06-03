@@ -14,12 +14,13 @@ export async function uploadFile(path: string, file: File): Promise<string> {
     throw new Error('Debe iniciar sesion para subir archivos.');
   }
 
-  if (!file.type.startsWith('image/')) {
-    throw new Error('Solo se permiten imagenes.');
+  if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
+    throw new Error('Solo se permiten imagenes o videos.');
   }
 
-  if (file.size > 10 * 1024 * 1024) {
-    throw new Error('La imagen no puede superar 10 MB.');
+  const maxBytes = file.type.startsWith('video/') ? 25 * 1024 * 1024 : 10 * 1024 * 1024;
+  if (file.size > maxBytes) {
+    throw new Error(file.type.startsWith('video/') ? 'El video no puede superar 25 MB.' : 'La imagen no puede superar 10 MB.');
   }
 
   const storage = getStorageInstance();

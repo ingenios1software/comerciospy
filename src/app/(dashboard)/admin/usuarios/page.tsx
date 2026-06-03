@@ -5,7 +5,8 @@ import { CalendarClock, CheckCircle2, Pencil, RefreshCw, ShieldCheck, UserPlus, 
 import { Sidebar } from '@/components/layout/sidebar';
 import { useAuth } from '@/lib/firebase/auth-context';
 import { categories } from '@/lib/categories';
-import { getAllComerciosForAdmin, getAllUsers } from '@/lib/firebase/firestore';
+import { getAllComerciosForAdmin, getAllUsers, updateCommerce } from '@/lib/firebase/firestore';
+import { daysUntilSubscription, getSubscriptionVenceAt, isSubscriptionExpired, isSubscriptionExpiringSoon } from '@/lib/subscription';
 import type { Comercio, SubscriptionStatus, UserRole, UsuarioApp } from '@/types';
 
 const roleOptions: Array<{ value: UserRole; label: string }> = [
@@ -46,15 +47,6 @@ function formatDate(value?: string) {
   return date.toLocaleDateString('es-PY', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
-function daysUntil(value?: string) {
-  if (!value) return null;
-  const today = new Date();
-  const target = new Date(`${value}T00:00:00`);
-  if (Number.isNaN(target.getTime())) return null;
-  today.setHours(0, 0, 0, 0);
-  return Math.ceil((target.getTime() - today.getTime()) / 86400000);
-}
-
 function getStatusLabel(status?: SubscriptionStatus) {
   return subscriptionStatusOptions.find((option) => option.value === status)?.label ?? 'Sin estado';
 }
@@ -62,6 +54,53 @@ function getStatusLabel(status?: SubscriptionStatus) {
 function formatAmount(value?: number, currency = 'PYG') {
   if (!value) return 'Sin monto';
   return `${new Intl.NumberFormat('es-PY').format(value)} ${currency}`;
+}
+
+function buildCommerceSubscriptionPayload(user: UsuarioApp): Partial<Comercio> {
+  return {
+    planNombre: user.planNombre ?? 'Basico',
+    suscripcionEstado: user.suscripcionEstado ?? 'active',
+    suscripcionInicio: user.suscripcionInicio ?? '',
+    suscripcionVenceEn: user.suscripcionVenceEn ?? '',
+    suscripcionVenceAt: getSubscriptionVenceAt(user.suscripcionVenceEn),
+    montoMensual: user.montoMensual ?? 0,
+    moneda: user.moneda ?? 'PYG'
+  };
+}
+
+function needsSubscriptionSync(comercio: Comercio, payload: Partial<Comercio>) {
+  return (
+    comercio.planNombre !== payload.planNombre ||
+    comercio.suscripcionEstado !== payload.suscripcionEstado ||
+    comercio.suscripcionInicio !== payload.suscripcionInicio ||
+    comercio.suscripcionVenceEn !== payload.suscripcionVenceEn ||
+    comercio.montoMensual !== payload.montoMensual ||
+    comercio.moneda !== payload.moneda
+  );
+}
+
+async function syncCommerceSubscriptions(users: UsuarioApp[], comercios: Comercio[]) {
+  const commerceById = new Map(comercios.map((comercio) => [comercio.id, comercio]));
+  const updates = users
+    .filter((user) => user.rol === 'comercio')
+    .map((user) => {
+      const comercioId = user.comercioId ?? user.id;
+      const comercio = commerceById.get(comercioId);
+      if (!comercio) return null;
+
+      const payload = buildCommerceSubscriptionPayload(user);
+      if (!needsSubscriptionSync(comercio, payload)) return null;
+
+      commerceById.set(comercioId, { ...comercio, ...payload });
+      return updateCommerce(comercioId, payload);
+    })
+    .filter((update): update is Promise<void> => update !== null);
+
+  if (updates.length > 0) {
+    await Promise.allSettled(updates);
+  }
+
+  return Array.from(commerceById.values());
 }
 
 export default function AdminUsuariosPage() {
@@ -105,14 +144,8 @@ export default function AdminUsuariosPage() {
         .sort((a, b) => (a.suscripcionVenceEn ?? '9999-12-31').localeCompare(b.suscripcionVenceEn ?? '9999-12-31')),
     [users]
   );
-  const expiredCount = commerceUsers.filter((item) => {
-    const remainingDays = daysUntil(item.suscripcionVenceEn);
-    return remainingDays !== null && remainingDays < 0;
-  }).length;
-  const expiringSoonCount = commerceUsers.filter((item) => {
-    const remainingDays = daysUntil(item.suscripcionVenceEn);
-    return remainingDays !== null && remainingDays >= 0 && remainingDays <= 7;
-  }).length;
+  const expiredCount = commerceUsers.filter(isSubscriptionExpired).length;
+  const expiringSoonCount = commerceUsers.filter((item) => !isSubscriptionExpired(item) && isSubscriptionExpiringSoon(item)).length;
 
   const loadUsers = async () => {
     if (!canCreateUsers) return;
@@ -121,8 +154,9 @@ export default function AdminUsuariosPage() {
 
     try {
       const [usersData, comerciosData] = await Promise.all([getAllUsers(), getAllComerciosForAdmin()]);
+      const syncedComercios = await syncCommerceSubscriptions(usersData, comerciosData);
       setUsers(usersData);
-      setComercios(comerciosData);
+      setComercios(syncedComercios);
     } catch {
       setUsersError('No se pudo cargar el listado de usuarios.');
     } finally {
@@ -480,10 +514,11 @@ export default function AdminUsuariosPage() {
                     ) : commerceUsers.length > 0 ? (
                       commerceUsers.map((item) => {
                         const comercio = comerciosById.get(item.comercioId ?? '');
-                        const remainingDays = daysUntil(item.suscripcionVenceEn);
-                        const isExpired = remainingDays !== null && remainingDays < 0;
-                        const isExpiringSoon = remainingDays !== null && remainingDays >= 0 && remainingDays <= 7;
-                        const statusLabel = isExpired ? 'Vencida' : getStatusLabel(item.suscripcionEstado);
+                        const remainingDays = daysUntilSubscription(item.suscripcionVenceEn);
+                        const isExpired = isSubscriptionExpired(item);
+                        const isExpiringSoon = !isExpired && isSubscriptionExpiringSoon(item);
+                        const statusLabel = item.suscripcionEstado === 'cancelled' ? 'Cancelada' : isExpired ? 'Vencida' : getStatusLabel(item.suscripcionEstado);
+                        const guideStatus = isExpired ? 'Pausado' : comercio?.activo ? 'Publicado' : 'Pendiente';
 
                         return (
                           <tr key={item.id} className="align-top">
@@ -518,8 +553,12 @@ export default function AdminUsuariosPage() {
                             </td>
                             <td className="px-4 py-4 text-slate-700">{formatAmount(item.montoMensual, item.moneda)}</td>
                             <td className="px-4 py-4">
-                              <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${comercio?.activo ? 'bg-slate-950 text-white' : 'bg-slate-100 text-slate-600'}`}>
-                                {comercio?.activo ? 'Publicado' : 'Pendiente'}
+                              <span
+                                className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
+                                  isExpired ? 'bg-rose-50 text-rose-700' : comercio?.activo ? 'bg-slate-950 text-white' : 'bg-slate-100 text-slate-600'
+                                }`}
+                              >
+                                {guideStatus}
                               </span>
                             </td>
                             <td className="px-4 py-4">

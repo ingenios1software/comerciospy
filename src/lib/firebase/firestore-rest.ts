@@ -3,6 +3,7 @@ type FirestoreValue =
   | { booleanValue: boolean }
   | { integerValue: string }
   | { doubleValue: number }
+  | { timestampValue: string }
   | { nullValue: null }
   | { arrayValue: { values?: FirestoreValue[] } }
   | { mapValue: { fields: Record<string, FirestoreValue> } };
@@ -19,6 +20,10 @@ function toFirestoreValue(value: unknown): FirestoreValue {
 
   if (Array.isArray(value)) {
     return value.length > 0 ? { arrayValue: { values: value.map(toFirestoreValue) } } : { arrayValue: {} };
+  }
+
+  if (value instanceof Date) {
+    return { timestampValue: value.toISOString() };
   }
 
   if (typeof value === 'object') {
@@ -47,6 +52,7 @@ function fromFirestoreValue(value: FirestoreValue): unknown {
   if ('booleanValue' in value) return value.booleanValue;
   if ('integerValue' in value) return Number(value.integerValue);
   if ('doubleValue' in value) return value.doubleValue;
+  if ('timestampValue' in value) return value.timestampValue;
   if ('nullValue' in value) return null;
   if ('arrayValue' in value) return (value.arrayValue.values ?? []).map(fromFirestoreValue);
   if ('mapValue' in value) return fromFirestoreFields(value.mapValue.fields ?? {});

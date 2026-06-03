@@ -9,6 +9,7 @@ import { PublicacionCard } from '@/components/publicaciones/publicacion-card';
 import { DigitalBusinessCard } from '@/components/comercios/digital-business-card';
 import { ImageLightbox, type LightboxImage } from '@/components/ui/image-lightbox';
 import { sampleComercios, samplePublicaciones } from '@/lib/mockData';
+import { isCommercePubliclyVisible } from '@/lib/subscription';
 import { buildMapsUrl, buildWhatsappUrl, cleanPhone } from '@/lib/utils/format';
 import type { Comercio, Publicacion } from '@/types';
 
@@ -27,7 +28,7 @@ export default function ComercioDetailPage() {
       try {
         const comercioItem = await getComercioById(commerceId);
         const fallback = sampleComercios.find((item) => item.id === commerceId) ?? null;
-        const selectedCommerce = comercioItem ?? fallback;
+        const selectedCommerce = comercioItem ? (isCommercePubliclyVisible(comercioItem) ? comercioItem : null) : fallback;
         setComercio(selectedCommerce);
 
         if (selectedCommerce) {

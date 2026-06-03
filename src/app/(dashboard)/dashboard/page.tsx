@@ -5,9 +5,11 @@ import { Edit3, PlusCircle, Sparkles, Store } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Sidebar } from '@/components/layout/sidebar';
 import { DigitalBusinessCard } from '@/components/comercios/digital-business-card';
+import { RenewalNotice } from '@/components/subscription/renewal-notice';
 import { useAuth } from '@/lib/firebase/auth-context';
 import { getComercioById, getPublicationsByCommerce } from '@/lib/firebase/firestore';
 import { samplePublicaciones } from '@/lib/mockData';
+import { isSubscriptionExpired } from '@/lib/subscription';
 import { PublicacionCard } from '@/components/publicaciones/publicacion-card';
 import type { Comercio, Publicacion } from '@/types';
 
@@ -15,6 +17,7 @@ export default function DashboardPage() {
   const { user, profile, loading } = useAuth();
   const [comercio, setComercio] = useState<Comercio | null>(null);
   const [publicaciones, setPublicaciones] = useState<Publicacion[]>([]);
+  const subscriptionExpired = profile?.rol === 'comercio' && isSubscriptionExpired(profile);
 
   useEffect(() => {
     const loadData = async () => {
@@ -60,6 +63,19 @@ export default function DashboardPage() {
     );
   }
 
+  if (subscriptionExpired) {
+    return (
+      <main className="min-h-screen bg-surface text-slate-950">
+        <div className="lg:flex lg:min-h-screen">
+          <Sidebar />
+          <div className="mx-auto w-full max-w-5xl px-4 pb-28 pt-24 sm:px-6 lg:px-8 lg:pt-8">
+            <RenewalNotice owner={profile} />
+          </div>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-surface text-slate-950">
       <div className="lg:flex lg:min-h-screen">
@@ -73,16 +89,18 @@ export default function DashboardPage() {
                   <h1 className="mt-2 text-3xl font-semibold">{comercio?.nombre ?? profile?.nombre ?? 'Mi comercio'}</h1>
                   <p className="mt-2 text-sm leading-6 text-slate-600">Actualiza tu ficha, carga fotos y publica novedades con ayuda de IA.</p>
                 </div>
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <Link href="/perfil" className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
-                    <Edit3 className="h-4 w-4" />
-                    Editar ficha
-                  </Link>
-                  <Link href="/publicar" className="inline-flex items-center justify-center gap-2 rounded-xl bg-accent px-4 py-3 text-sm font-semibold text-white transition hover:bg-red-700">
-                    <PlusCircle className="h-4 w-4" />
-                    Publicar
-                  </Link>
-                </div>
+                {!subscriptionExpired ? (
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <Link href="/perfil" className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+                      <Edit3 className="h-4 w-4" />
+                      Editar ficha
+                    </Link>
+                    <Link href="/publicar" className="inline-flex items-center justify-center gap-2 rounded-xl bg-accent px-4 py-3 text-sm font-semibold text-white transition hover:bg-red-700">
+                      <PlusCircle className="h-4 w-4" />
+                      Publicar
+                    </Link>
+                  </div>
+                ) : null}
               </div>
             </section>
 
@@ -90,7 +108,7 @@ export default function DashboardPage() {
               <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-soft">
                 <Store className="h-5 w-5 text-accent" />
                 <p className="mt-4 text-sm font-semibold text-slate-500">Estado</p>
-                <p className="mt-1 text-2xl font-semibold text-slate-950">{comercio?.activo ? 'Activo' : 'Pendiente'}</p>
+                <p className="mt-1 text-2xl font-semibold text-slate-950">{subscriptionExpired ? 'Pausado' : comercio?.activo ? 'Activo' : 'Pendiente'}</p>
               </div>
               <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-soft">
                 <PlusCircle className="h-5 w-5 text-emerald-600" />
@@ -100,7 +118,7 @@ export default function DashboardPage() {
               <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-soft">
                 <Sparkles className="h-5 w-5 text-slate-700" />
                 <p className="mt-4 text-sm font-semibold text-slate-500">Asistente IA</p>
-                <p className="mt-1 text-2xl font-semibold text-slate-950">Listo</p>
+                <p className="mt-1 text-2xl font-semibold text-slate-950">{subscriptionExpired ? 'Bloqueado' : 'Listo'}</p>
               </div>
             </section>
 
@@ -112,9 +130,11 @@ export default function DashboardPage() {
                   <p className="mt-3 text-sm leading-6 text-slate-600">
                     Usa este enlace para presentarte en WhatsApp, estados, redes sociales o mensajes directos. Cada cliente abre tu ficha con telefono, ubicacion, horario, fotos y publicaciones.
                   </p>
-                  <Link href={`/comercios/${comercio.id}`} className="mt-5 inline-flex rounded-2xl bg-accent px-4 py-3 text-sm font-semibold text-white transition hover:bg-red-700">
-                    Ver tarjeta publica
-                  </Link>
+                  {!subscriptionExpired ? (
+                    <Link href={`/comercios/${comercio.id}`} className="mt-5 inline-flex rounded-2xl bg-accent px-4 py-3 text-sm font-semibold text-white transition hover:bg-red-700">
+                      Ver tarjeta publica
+                    </Link>
+                  ) : null}
                 </div>
               </section>
             ) : null}
@@ -125,9 +145,11 @@ export default function DashboardPage() {
                   <h2 className="text-xl font-semibold text-slate-950">Tus publicaciones</h2>
                   <p className="mt-1 text-sm text-slate-500">Contenido visible en la ficha del comercio.</p>
                 </div>
-                <Link href="/publicar" className="rounded-2xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800">
-                  Nueva
-                </Link>
+                {!subscriptionExpired ? (
+                  <Link href="/publicar" className="rounded-2xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800">
+                    Nueva
+                  </Link>
+                ) : null}
               </div>
               <div className="grid gap-3 lg:grid-cols-3">
                 {publicaciones.length > 0 ? (

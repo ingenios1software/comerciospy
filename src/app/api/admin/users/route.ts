@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createFirestoreDocument, deleteFirestoreDocument, getFirestoreDocument, updateFirestoreDocument } from '@/lib/firebase/firestore-rest';
+import { getSubscriptionVenceAt } from '@/lib/subscription';
 import type { Comercio, SubscriptionStatus, UserRole, UsuarioApp } from '@/types';
 
 export const runtime = 'nodejs';
@@ -48,6 +49,32 @@ function jsonError(message: string, status: number) {
 
 function clean(value: unknown) {
   return typeof value === 'string' ? value.trim() : '';
+}
+
+function buildSubscriptionData({
+  planNombre,
+  suscripcionEstado,
+  suscripcionInicio,
+  suscripcionVenceEn,
+  montoMensual,
+  moneda
+}: {
+  planNombre: string;
+  suscripcionEstado: SubscriptionStatus;
+  suscripcionInicio: string;
+  suscripcionVenceEn: string;
+  montoMensual: number;
+  moneda: string;
+}) {
+  return {
+    planNombre,
+    suscripcionEstado,
+    suscripcionInicio,
+    suscripcionVenceEn,
+    suscripcionVenceAt: getSubscriptionVenceAt(suscripcionVenceEn),
+    montoMensual: Number.isFinite(montoMensual) ? montoMensual : 0,
+    moneda
+  };
 }
 
 function getBearerToken(request: NextRequest) {
@@ -199,6 +226,14 @@ export async function POST(request: NextRequest) {
   }
 
   const createdAt = new Date().toISOString();
+  const subscriptionData = buildSubscriptionData({
+    planNombre,
+    suscripcionEstado,
+    suscripcionInicio: suscripcionInicio || createdAt.slice(0, 10),
+    suscripcionVenceEn,
+    montoMensual,
+    moneda
+  });
   let createdAuthUser: Awaited<ReturnType<typeof createAuthUser>>;
 
   try {
@@ -216,14 +251,7 @@ export async function POST(request: NextRequest) {
     rol,
     ...(rol === 'comercio' ? { comercioId: uid } : {}),
     ...(rol === 'comercio'
-      ? {
-          planNombre,
-          suscripcionEstado,
-          suscripcionInicio: suscripcionInicio || createdAt.slice(0, 10),
-          suscripcionVenceEn,
-          montoMensual: Number.isFinite(montoMensual) ? montoMensual : 0,
-          moneda
-        }
+      ? subscriptionData
       : {}),
     activo: true,
     creadoEn: createdAt
@@ -248,6 +276,7 @@ export async function POST(request: NextRequest) {
           fotos: [],
           servicios: [],
           horario,
+          ...subscriptionData,
           ubicacionUrl,
           ubicacion: {
             lat: 0,
@@ -360,12 +389,14 @@ export async function PATCH(request: NextRequest) {
     ...(rol === 'comercio'
       ? {
           comercioId: id,
-          planNombre,
-          suscripcionEstado,
-          suscripcionInicio,
-          suscripcionVenceEn,
-          montoMensual: Number.isFinite(montoMensual) ? montoMensual : 0,
-          moneda
+          ...buildSubscriptionData({
+            planNombre,
+            suscripcionEstado,
+            suscripcionInicio,
+            suscripcionVenceEn,
+            montoMensual,
+            moneda
+          })
         }
       : {})
   };
@@ -384,6 +415,13 @@ export async function PATCH(request: NextRequest) {
           telefono,
           whatsapp,
           horario,
+          planNombre,
+          suscripcionEstado,
+          suscripcionInicio,
+          suscripcionVenceEn,
+          suscripcionVenceAt: getSubscriptionVenceAt(suscripcionVenceEn),
+          montoMensual: Number.isFinite(montoMensual) ? montoMensual : 0,
+          moneda,
           activo
         }
       : null;

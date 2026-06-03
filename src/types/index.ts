@@ -11,6 +11,7 @@ export type UsuarioApp = {
   suscripcionEstado?: SubscriptionStatus;
   suscripcionInicio?: string;
   suscripcionVenceEn?: string;
+  suscripcionVenceAt?: unknown;
   montoMensual?: number;
   moneda?: string;
   activo: boolean;
@@ -55,6 +56,13 @@ export type Comercio = {
   fotos?: string[];
   servicios?: string[];
   horario: string;
+  planNombre?: string;
+  suscripcionEstado?: SubscriptionStatus;
+  suscripcionInicio?: string;
+  suscripcionVenceEn?: string;
+  suscripcionVenceAt?: unknown;
+  montoMensual?: number;
+  moneda?: string;
   ubicacionUrl?: string;
   ubicacion: {
     lat: number;
@@ -73,6 +81,10 @@ export type Publicacion = {
   descripcion: string;
   precio?: number | null;
   imagenUrl: string;
+  mediaUrl?: string;
+  mediaType?: 'image' | 'video';
+  duracionSegundos?: number;
+  moderacionEstado?: 'approved' | 'rejected';
   categoria: string;
   ciudad: string;
   activo: boolean;

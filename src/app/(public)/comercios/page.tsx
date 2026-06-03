@@ -28,7 +28,7 @@ export default function ComerciosPage() {
     const loadComercios = async () => {
       try {
         const data = await getAllComercios();
-        setComercios(data.length > 0 ? data : sampleComercios);
+        setComercios(data);
       } catch {
         setComercios(sampleComercios);
       } finally {

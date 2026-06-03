@@ -4,6 +4,7 @@ import { AuthProvider } from '@/lib/firebase/auth-context';
 import { Navbar } from '@/components/ui/navbar';
 import { BottomNavigation } from '@/components/layout/bottom-navigation';
 import { InstallAppButton } from '@/components/pwa/install-app-button';
+import { VisitorVoiceAssistant } from '@/components/assistant/visitor-voice-assistant';
 import { BrandFooter } from '@/components/layout/brand-footer';
 import { developerBrand } from '@/lib/brand';
 
@@ -62,6 +63,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {children}
           <BrandFooter />
           <BottomNavigation />
+          <VisitorVoiceAssistant />
           <InstallAppButton />
         </AuthProvider>
       </body>

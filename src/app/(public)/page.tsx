@@ -9,10 +9,12 @@ import { PublicacionCard } from '@/components/publicaciones/publicacion-card';
 import { CategoryPills } from '@/components/ui/category-pills';
 import { SearchBar } from '@/components/ui/search-bar';
 import { ShareAppButton } from '@/components/ui/share-app-button';
+import { adminContactMessage, adminWhatsapp } from '@/lib/admin-contact';
 import { categories } from '@/lib/categories';
 import { cityMatches, getCityOptions } from '@/lib/cities';
 import { getAllComercios, getLatestPublications } from '@/lib/firebase/firestore';
 import { sampleComercios, samplePublicaciones } from '@/lib/mockData';
+import { buildWhatsappUrl } from '@/lib/utils/format';
 import type { Comercio, Publicacion } from '@/types';
 
 export default function Home() {
@@ -24,12 +26,13 @@ export default function Home() {
   const [selectedCity, setSelectedCity] = useState('Todas');
   const [loadingComercios, setLoadingComercios] = useState(true);
   const [loadingPublicaciones, setLoadingPublicaciones] = useState(true);
+  const adminWhatsappUrl = useMemo(() => buildWhatsappUrl(adminWhatsapp, adminContactMessage), []);
 
   useEffect(() => {
     const loadData = async () => {
       try {
         const comerciosData = await getAllComercios();
-        setComercios(comerciosData.length > 0 ? comerciosData : sampleComercios);
+        setComercios(comerciosData);
       } catch {
         setComercios(sampleComercios);
       } finally {
@@ -40,7 +43,7 @@ export default function Home() {
     const loadPublicaciones = async () => {
       try {
         const publicacionesData = await getLatestPublications(4);
-        setPublicaciones(publicacionesData.length > 0 ? publicacionesData : samplePublicaciones);
+        setPublicaciones(publicacionesData);
       } catch {
         setPublicaciones(samplePublicaciones);
       } finally {
@@ -137,10 +140,15 @@ export default function Home() {
               <Search className="h-4 w-4" />
               Buscar gratis
             </Link>
-            <Link href="/registro" className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+            <a
+              href={adminWhatsappUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            >
               <MessageCircle className="h-4 w-4" />
               Soy comercio y quiero aparecer
-            </Link>
+            </a>
             <div className="mt-3 border-t border-slate-100 pt-3">
               <ShareAppButton mode="panel" />
             </div>
@@ -169,10 +177,15 @@ export default function Home() {
               <CategoryPills categories={categories} selectedCategory={selectedCategory} onSelectCategory={setSelectedCategory} />
             </div>
           </div>
-          <Link href="/registro" className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-soft lg:hidden">
+          <a
+            href={adminWhatsappUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-soft lg:hidden"
+          >
             <span>Soy comercio o prestador</span>
             <span className="text-accent">Quiero aparecer</span>
-          </Link>
+          </a>
           <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-soft lg:hidden">
             <ShareAppButton mode="panel" />
           </div>
@@ -211,9 +224,14 @@ export default function Home() {
               </div>
               <p className="mt-1 text-sm text-slate-500">Ofertas, servicios y novedades cargadas por los comercios.</p>
             </div>
-            <Link href="/registro" className="inline-flex items-center gap-2 rounded-xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white shadow-soft transition hover:bg-slate-800">
+            <a
+              href={adminWhatsappUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 rounded-xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white shadow-soft transition hover:bg-slate-800"
+            >
               Soy comercio
-            </Link>
+            </a>
           </div>
           <div className="grid gap-3 lg:grid-cols-3">
             {loadingPublicaciones ? (

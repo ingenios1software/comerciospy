@@ -2,13 +2,15 @@
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ExternalLink, ImagePlus, Loader2, MapPin, Navigation, Save } from 'lucide-react';
+import { ExternalLink, ImagePlus, Loader2, MapPin, Navigation, Save, Search } from 'lucide-react';
 import { Sidebar } from '@/components/layout/sidebar';
 import { ImageLightbox, type LightboxImage } from '@/components/ui/image-lightbox';
+import { RenewalNotice } from '@/components/subscription/renewal-notice';
 import { useAuth } from '@/lib/firebase/auth-context';
 import { getComercioById, updateCommerce } from '@/lib/firebase/firestore';
 import { uploadFile } from '@/lib/firebase/storage';
 import { categories } from '@/lib/categories';
+import { isSubscriptionExpired } from '@/lib/subscription';
 import type { Comercio } from '@/types';
 
 const requiredProfileFields: Array<{ label: string; value: (data: ProfileFormData) => string }> = [
@@ -73,12 +75,20 @@ function buildCoordinateMapsUrl(lat: number, lng: number) {
   return `https://www.google.com/maps/search/?api=1&query=${formatCoordinate(lat)},${formatCoordinate(lng)}`;
 }
 
+function safeDecodeURIComponent(value: string) {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
 function parseCoordinatesFromText(value: string) {
-  const text = decodeURIComponent(value.trim());
+  const text = safeDecodeURIComponent(value.trim());
   const patterns = [
-    /@(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)/,
-    /[?&](?:q|query)=(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)/,
     /!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/,
+    /[?&](?:q|query|ll|destination)=(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)/,
+    /@(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)/,
     /(-?\d{1,2}\.\d+),\s*(-?\d{1,3}\.\d+)/
   ];
 
@@ -92,6 +102,27 @@ function parseCoordinatesFromText(value: string) {
   }
 
   return null;
+}
+
+function isZeroCoordinateLocation(value: string) {
+  const coordinates = parseCoordinatesFromText(value);
+  const text = safeDecodeURIComponent(value.trim());
+
+  return (
+    (coordinates?.lat === 0 && coordinates?.lng === 0) ||
+    /0[\u00b0\u00ba]\s*0['\u2019]\s*0(?:\.0+)?["\u201d]?[NS]\s+0[\u00b0\u00ba]\s*0['\u2019]\s*0(?:\.0+)?["\u201d]?[EW]/i.test(text)
+  );
+}
+
+function cleanLocationPhone(value: string) {
+  return value.replace(/[^0-9]/g, '');
+}
+
+function buildGoogleBusinessSearchUrl(data: Pick<ProfileFormData, 'nombre' | 'direccion' | 'ciudad' | 'telefono' | 'whatsapp'>) {
+  const phone = cleanLocationPhone(data.whatsapp || data.telefono);
+  const locationHint = phone || data.direccion;
+  const query = [data.nombre, data.ciudad, locationHint].map(clean).filter(Boolean).join(' ');
+  return query ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}` : 'https://www.google.com/maps';
 }
 
 function getGeolocationErrorMessage(error: GeolocationPositionError) {
@@ -135,6 +166,7 @@ function getFirebaseSaveMessage(error: unknown) {
 
 export default function PerfilPage() {
   const { user, profile, loading } = useAuth();
+  const subscriptionExpired = profile?.rol === 'comercio' && isSubscriptionExpired(profile);
   const categoryOptions = categories.filter((category) => category.id !== 'Todos');
   const [comercio, setComercio] = useState<Comercio | null>(null);
   const [nombre, setNombre] = useState('');
@@ -188,12 +220,13 @@ export default function PerfilPage() {
           setTelefono(data.telefono ?? '');
           setWhatsapp(data.whatsapp);
           setHorario(data.horario);
-          setUbicacionUrl(data.ubicacionUrl ?? '');
+          const savedUrl = isZeroCoordinateLocation(data.ubicacionUrl ?? '') ? '' : data.ubicacionUrl ?? '';
+          setUbicacionUrl(savedUrl);
           if (isUsableSavedCoordinates(data.ubicacion?.lat, data.ubicacion?.lng)) {
             setUbicacionLat(formatCoordinate(data.ubicacion.lat));
             setUbicacionLng(formatCoordinate(data.ubicacion.lng));
           } else {
-            const parsedCoordinates = parseCoordinatesFromText(data.ubicacionUrl ?? '');
+            const parsedCoordinates = parseCoordinatesFromText(savedUrl);
             setUbicacionLat(parsedCoordinates ? formatCoordinate(parsedCoordinates.lat) : '');
             setUbicacionLng(parsedCoordinates ? formatCoordinate(parsedCoordinates.lng) : '');
           }
@@ -207,23 +240,38 @@ export default function PerfilPage() {
     loadCommerce();
   }, [comercioId]);
 
+  const googleBusinessSearchUrl = useMemo(
+    () => buildGoogleBusinessSearchUrl({ nombre, direccion, ciudad, telefono, whatsapp }),
+    [nombre, direccion, ciudad, telefono, whatsapp]
+  );
+
   const currentLocationUrl = useMemo(() => {
-    if (ubicacionUrl.trim()) return ubicacionUrl.trim();
+    const savedUrl = ubicacionUrl.trim();
+    if (savedUrl && !isZeroCoordinateLocation(savedUrl)) return savedUrl;
 
     const coordinates = getValidCoordinates(ubicacionLat, ubicacionLng);
-    return coordinates ? buildCoordinateMapsUrl(coordinates.lat, coordinates.lng) : '';
+    if (coordinates) return buildCoordinateMapsUrl(coordinates.lat, coordinates.lng);
+
+    return '';
   }, [ubicacionLat, ubicacionLng, ubicacionUrl]);
 
-  const syncCoordinates = (lat: number, lng: number) => {
+  const syncCoordinates = (lat: number, lng: number, options?: { updateUrl?: boolean }) => {
     setUbicacionLat(formatCoordinate(lat));
     setUbicacionLng(formatCoordinate(lng));
-    setUbicacionUrl(buildCoordinateMapsUrl(lat, lng));
+    if (options?.updateUrl !== false) {
+      setUbicacionUrl(buildCoordinateMapsUrl(lat, lng));
+    }
   };
 
   const handleLocationUrlChange = (value: string) => {
     setUbicacionUrl(value);
     const coordinates = parseCoordinatesFromText(value);
-    if (coordinates) syncCoordinates(coordinates.lat, coordinates.lng);
+    if (coordinates && isUsableSavedCoordinates(coordinates.lat, coordinates.lng)) {
+      syncCoordinates(coordinates.lat, coordinates.lng, { updateUrl: false });
+    } else if (isZeroCoordinateLocation(value)) {
+      setUbicacionLat('');
+      setUbicacionLng('');
+    }
   };
 
   const handleCoordinateChange = (nextLat: string, nextLng: string) => {
@@ -303,6 +351,7 @@ export default function PerfilPage() {
     };
     const hasLocationInput = Boolean(ubicacionLat.trim() || ubicacionLng.trim());
     const ubicacion = getValidCoordinates(ubicacionLat, ubicacionLng);
+    const savedUrl = isZeroCoordinateLocation(formData.ubicacionUrl) ? '' : formData.ubicacionUrl;
 
     if (hasLocationInput && !ubicacion) {
       setError('Revisa las coordenadas de ubicacion.');
@@ -310,7 +359,8 @@ export default function PerfilPage() {
       return;
     }
 
-    const locationUrl = formData.ubicacionUrl || (ubicacion ? buildCoordinateMapsUrl(ubicacion.lat, ubicacion.lng) : '');
+    const savedLocation = ubicacion ?? { lat: 0, lng: 0 };
+    const locationUrl = savedUrl || (ubicacion ? buildCoordinateMapsUrl(ubicacion.lat, ubicacion.lng) : '');
 
     const missingFields = requiredProfileFields
       .filter((field) => !field.value(formData))
@@ -349,7 +399,7 @@ export default function PerfilPage() {
         whatsapp: formData.whatsapp,
         horario: formData.horario,
         ubicacionUrl: locationUrl,
-        ...(ubicacion ? { ubicacion } : {}),
+        ubicacion: savedLocation,
         fotos,
         servicios: formData.servicios
           .split(',')
@@ -375,6 +425,19 @@ export default function PerfilPage() {
     return (
       <main className="min-h-screen bg-surface px-4 pb-28 pt-24 text-slate-950 sm:px-6">
         <div className="mx-auto max-w-3xl py-24 text-center text-slate-500">Cargando perfil...</div>
+      </main>
+    );
+  }
+
+  if (user && subscriptionExpired) {
+    return (
+      <main className="min-h-screen bg-surface text-slate-950">
+        <div className="lg:flex lg:min-h-screen">
+          <Sidebar />
+          <div className="mx-auto w-full max-w-5xl px-4 pb-28 pt-24 sm:px-6 lg:px-8 lg:pt-8">
+            <RenewalNotice owner={profile} showBackLink />
+          </div>
+        </div>
       </main>
     );
   }
@@ -449,37 +512,51 @@ export default function PerfilPage() {
                       <MapPin className="h-4 w-4 text-accent" />
                       <p className="text-sm font-semibold text-slate-950">Ubicacion del negocio</p>
                     </div>
-                    <p className="mt-1 text-xs leading-5 text-slate-500">GPS del celular, link de Maps o coordenadas manuales.</p>
+                    <p className="mt-1 text-xs leading-5 text-slate-500">Ficha de Google Maps o GPS del celular.</p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleUseCurrentLocation}
-                    disabled={locating}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {locating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Navigation className="h-4 w-4" />}
-                    {locating ? 'Detectando...' : 'Usar ubicacion actual'}
-                  </button>
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <a
+                      href={googleBusinessSearchUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                    >
+                      <Search className="h-4 w-4" />
+                      Buscar ficha en Maps
+                    </a>
+                    <button
+                      type="button"
+                      onClick={handleUseCurrentLocation}
+                      disabled={locating}
+                      className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {locating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Navigation className="h-4 w-4" />}
+                      {locating ? 'Detectando...' : 'Usar ubicacion actual'}
+                    </button>
+                  </div>
                 </div>
 
                 <div className="mt-4 space-y-4">
                   <Field id="ubicacionUrl" label="Link de Google Maps" value={ubicacionUrl} onChange={handleLocationUrlChange} placeholder="https://www.google.com/maps/..." />
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <Field
-                      id="ubicacionLat"
-                      label="Latitud"
-                      value={ubicacionLat}
-                      onChange={(value) => handleCoordinateChange(value, ubicacionLng)}
-                      placeholder="-25.2867"
-                    />
-                    <Field
-                      id="ubicacionLng"
-                      label="Longitud"
-                      value={ubicacionLng}
-                      onChange={(value) => handleCoordinateChange(ubicacionLat, value)}
-                      placeholder="-57.3333"
-                    />
-                  </div>
+                  <details className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                    <summary className="cursor-pointer text-sm font-semibold text-slate-700">Ajuste manual de coordenadas</summary>
+                    <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                      <Field
+                        id="ubicacionLat"
+                        label="Latitud"
+                        value={ubicacionLat}
+                        onChange={(value) => handleCoordinateChange(value, ubicacionLng)}
+                        placeholder="-25.2867"
+                      />
+                      <Field
+                        id="ubicacionLng"
+                        label="Longitud"
+                        value={ubicacionLng}
+                        onChange={(value) => handleCoordinateChange(ubicacionLat, value)}
+                        placeholder="-57.3333"
+                      />
+                    </div>
+                  </details>
                   <div className="flex flex-col gap-2 sm:flex-row">
                     {currentLocationUrl ? (
                       <a

@@ -8,6 +8,8 @@ import { useAuth } from '@/lib/firebase/auth-context';
 import { uploadFile } from '@/lib/firebase/storage';
 import { createPublication, getComercioById } from '@/lib/firebase/firestore';
 import { categories } from '@/lib/categories';
+import { RenewalNotice } from '@/components/subscription/renewal-notice';
+import { isSubscriptionExpired } from '@/lib/subscription';
 import type { AiPublicationSuggestion, Comercio, Publicacion } from '@/types';
 
 type AiResponse = {
@@ -15,9 +17,21 @@ type AiResponse = {
   error?: string;
 };
 
+type MediaKind = 'image' | 'video';
+
+type ModerationResponse = {
+  approved?: boolean;
+  flaggedCategories?: string[];
+  error?: string;
+};
+
 const supportedPublicationImageTypes = ['image/jpeg', 'image/png', 'image/webp'];
 const supportedPublicationImageExtensions = ['.jpg', '.jpeg', '.png', '.webp'];
+const supportedPublicationVideoTypes = ['video/mp4', 'video/webm', 'video/quicktime'];
+const supportedPublicationVideoExtensions = ['.mp4', '.webm', '.mov'];
 const maxAiImageBytes = 8 * 1024 * 1024;
+const maxPublicationVideoBytes = 25 * 1024 * 1024;
+const maxPublicationVideoSeconds = 20;
 const maxPublicationImageDimension = 1600;
 const publicationImageQuality = 0.86;
 
@@ -34,6 +48,11 @@ function isHeicImage(file: File) {
 function isSupportedPublicationImage(file: File) {
   const extension = getFileExtension(file.name);
   return supportedPublicationImageTypes.includes(file.type) || supportedPublicationImageExtensions.includes(extension);
+}
+
+function isSupportedPublicationVideo(file: File) {
+  const extension = getFileExtension(file.name);
+  return supportedPublicationVideoTypes.includes(file.type) || supportedPublicationVideoExtensions.includes(extension);
 }
 
 function loadImage(file: File) {
@@ -53,6 +72,117 @@ function loadImage(file: File) {
 
     image.src = imageUrl;
   });
+}
+
+function loadVideoMetadata(file: File) {
+  return new Promise<{ duration: number }>((resolve, reject) => {
+    const video = document.createElement('video');
+    const videoUrl = URL.createObjectURL(file);
+
+    video.preload = 'metadata';
+    video.muted = true;
+    video.playsInline = true;
+
+    video.onloadedmetadata = () => {
+      URL.revokeObjectURL(videoUrl);
+      resolve({ duration: video.duration });
+    };
+
+    video.onerror = () => {
+      URL.revokeObjectURL(videoUrl);
+      reject(new Error('No pudimos leer este video. Usa MP4, WebM o MOV corto.'));
+    };
+
+    video.src = videoUrl;
+  });
+}
+
+function waitForVideoSeek(video: HTMLVideoElement, time: number) {
+  return new Promise<void>((resolve, reject) => {
+    const timeout = window.setTimeout(() => {
+      reject(new Error('No pudimos revisar este video. Intenta con otro archivo.'));
+    }, 8000);
+
+    video.onseeked = () => {
+      window.clearTimeout(timeout);
+      resolve();
+    };
+
+    video.onerror = () => {
+      window.clearTimeout(timeout);
+      reject(new Error('No pudimos revisar este video. Intenta con otro archivo.'));
+    };
+
+    video.currentTime = time;
+  });
+}
+
+function dataUrlToFile(dataUrl: string, fileName: string) {
+  const [header, base64] = dataUrl.split(',');
+  const mimeType = header.match(/data:(.*?);base64/)?.[1] ?? 'image/jpeg';
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+
+  return new File([bytes], fileName, { type: mimeType, lastModified: Date.now() });
+}
+
+function fileToDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error('No pudimos leer el archivo para revisarlo.'));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function extractVideoFrames(file: File, frameCount = 5) {
+  const metadata = await loadVideoMetadata(file);
+  const video = document.createElement('video');
+  const videoUrl = URL.createObjectURL(file);
+  const duration = Math.max(0, metadata.duration);
+  const times = Array.from({ length: frameCount }, (_, index) => {
+    if (frameCount === 1) return Math.min(duration, 0.1);
+    const rawTime = (duration * index) / (frameCount - 1);
+    return Math.min(Math.max(rawTime, 0.1), Math.max(duration - 0.1, 0.1));
+  });
+
+  try {
+    video.preload = 'auto';
+    video.muted = true;
+    video.playsInline = true;
+    video.src = videoUrl;
+
+    await new Promise<void>((resolve, reject) => {
+      video.onloadedmetadata = () => resolve();
+      video.onerror = () => reject(new Error('No pudimos revisar este video. Usa MP4, WebM o MOV corto.'));
+    });
+
+    const canvas = document.createElement('canvas');
+    const largestSide = Math.max(video.videoWidth, video.videoHeight);
+    const scale = largestSide > 640 ? 640 / largestSide : 1;
+    canvas.width = Math.max(1, Math.round(video.videoWidth * scale));
+    canvas.height = Math.max(1, Math.round(video.videoHeight * scale));
+    const context = canvas.getContext('2d');
+
+    if (!context) {
+      throw new Error('No pudimos revisar este video. Intenta con otro archivo.');
+    }
+
+    const frames: string[] = [];
+    for (const time of times) {
+      await waitForVideoSeek(video, time);
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      frames.push(canvas.toDataURL('image/jpeg', 0.76));
+    }
+
+    return frames;
+  } finally {
+    URL.revokeObjectURL(videoUrl);
+  }
 }
 
 function getResizedDimensions(width: number, height: number) {
@@ -118,6 +248,67 @@ async function preparePublicationImage(file: File) {
   });
 }
 
+async function preparePublicationVideo(file: File) {
+  if (!isSupportedPublicationVideo(file)) {
+    throw new Error('Formato no compatible. Usa un video MP4, WebM o MOV.');
+  }
+
+  if (file.size > maxPublicationVideoBytes) {
+    throw new Error('El video no puede superar 25 MB.');
+  }
+
+  const metadata = await loadVideoMetadata(file);
+  if (!Number.isFinite(metadata.duration) || metadata.duration <= 0) {
+    throw new Error('No pudimos leer la duracion del video.');
+  }
+
+  if (metadata.duration > maxPublicationVideoSeconds) {
+    throw new Error(`El video debe durar hasta ${maxPublicationVideoSeconds} segundos.`);
+  }
+
+  return {
+    file,
+    duration: metadata.duration
+  };
+}
+
+async function moderatePublicationMedia({
+  file,
+  mediaKind,
+  titulo,
+  descripcion,
+  categoria,
+  tipo
+}: {
+  file: File;
+  mediaKind: MediaKind;
+  titulo: string;
+  descripcion: string;
+  categoria: string;
+  tipo: Publicacion['tipo'];
+}) {
+  const frames = mediaKind === 'video' ? await extractVideoFrames(file) : [await fileToDataUrl(file)];
+  const text = [`Titulo: ${titulo}`, `Descripcion: ${descripcion}`, `Categoria: ${categoria}`, `Tipo: ${tipo}`].join('\n');
+
+  const response = await fetch('/api/ai/moderar-media', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ text, frames })
+  });
+  const data = (await response.json().catch(() => null)) as ModerationResponse | null;
+
+  if (!response.ok) {
+    throw new Error(data?.error ?? 'No pudimos revisar el contenido con IA.');
+  }
+
+  if (!data?.approved) {
+    const categories = data?.flaggedCategories?.length ? ` (${data.flaggedCategories.join(', ')})` : '';
+    throw new Error(`No podemos publicar este contenido porque la revision IA detecto material no permitido${categories}.`);
+  }
+}
+
 function getFirebasePublishMessage(error: unknown) {
   const code = typeof error === 'object' && error !== null && 'code' in error ? String(error.code) : '';
   const message = error instanceof Error ? error.message : '';
@@ -148,6 +339,7 @@ function getFirebasePublishMessage(error: unknown) {
 export default function PublicarPage() {
   const router = useRouter();
   const { user, profile, loading } = useAuth();
+  const subscriptionExpired = profile?.rol === 'comercio' && isSubscriptionExpired(profile);
   const categoryOptions = categories.filter((category) => category.id !== 'Todos');
   const [comercio, setComercio] = useState<Comercio | null>(null);
   const [titulo, setTitulo] = useState('');
@@ -155,12 +347,15 @@ export default function PublicarPage() {
   const [precio, setPrecio] = useState('');
   const [categoria, setCategoria] = useState(categoryOptions[0]?.label ?? 'Servicios');
   const [descripcion, setDescripcion] = useState('');
-  const [file, setFile] = useState<File | null>(null);
+  const [mediaFile, setMediaFile] = useState<File | null>(null);
+  const [mediaKind, setMediaKind] = useState<MediaKind | null>(null);
+  const [videoDuration, setVideoDuration] = useState<number | null>(null);
   const [aiSuggestion, setAiSuggestion] = useState<AiPublicationSuggestion | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
-  const [preparingImage, setPreparingImage] = useState(false);
+  const [preparingMedia, setPreparingMedia] = useState(false);
+  const [reviewingMedia, setReviewingMedia] = useState(false);
 
   useEffect(() => {
     const loadCommerce = async () => {
@@ -177,7 +372,7 @@ export default function PublicarPage() {
     loadCommerce();
   }, [profile?.comercioId]);
 
-  const previewUrl = useMemo(() => (file ? URL.createObjectURL(file) : ''), [file]);
+  const previewUrl = useMemo(() => (mediaFile ? URL.createObjectURL(mediaFile) : ''), [mediaFile]);
 
   useEffect(() => {
     return () => {
@@ -189,16 +384,25 @@ export default function PublicarPage() {
     setError(null);
     setAiSuggestion(null);
 
-    if (!file) {
-      setError('Sube una foto para que la IA pueda analizarla.');
+    if (subscriptionExpired) {
+      setError('Tu periodo esta vencido. Renova la suscripcion para usar la IA.');
+      return;
+    }
+
+    if (!mediaFile || !mediaKind) {
+      setError('Sube una foto o video para que la IA pueda analizarlo.');
       return;
     }
 
     setAnalyzing(true);
 
     try {
+      const analysisFile =
+        mediaKind === 'video'
+          ? dataUrlToFile((await extractVideoFrames(mediaFile, 1))[0], 'fotograma-video.jpg')
+          : mediaFile;
       const formData = new FormData();
-      formData.append('image', file);
+      formData.append('image', analysisFile);
       formData.append('businessName', comercio?.nombre ?? profile?.nombre ?? '');
       formData.append('businessCategory', comercio?.categoria ?? categoria);
       formData.append('currentTitle', titulo);
@@ -226,28 +430,40 @@ export default function PublicarPage() {
     }
   };
 
-  const handleImageChange = async (event: ChangeEvent<HTMLInputElement>) => {
+  const handleMediaChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0] ?? null;
 
     setError(null);
     setAiSuggestion(null);
+    setVideoDuration(null);
 
     if (!selectedFile) {
-      setFile(null);
+      setMediaFile(null);
+      setMediaKind(null);
       return;
     }
 
-    setPreparingImage(true);
+    setPreparingMedia(true);
 
     try {
-      const preparedFile = await preparePublicationImage(selectedFile);
-      setFile(preparedFile);
-    } catch (imageError) {
-      setFile(null);
+      if (isSupportedPublicationVideo(selectedFile)) {
+        const preparedVideo = await preparePublicationVideo(selectedFile);
+        setMediaFile(preparedVideo.file);
+        setMediaKind('video');
+        setVideoDuration(preparedVideo.duration);
+      } else {
+        const preparedFile = await preparePublicationImage(selectedFile);
+        setMediaFile(preparedFile);
+        setMediaKind('image');
+      }
+    } catch (mediaError) {
+      setMediaFile(null);
+      setMediaKind(null);
+      setVideoDuration(null);
       event.target.value = '';
-      setError(imageError instanceof Error ? imageError.message : 'No pudimos preparar esta foto.');
+      setError(mediaError instanceof Error ? mediaError.message : 'No pudimos preparar este archivo.');
     } finally {
-      setPreparingImage(false);
+      setPreparingMedia(false);
     }
   };
 
@@ -255,6 +471,12 @@ export default function PublicarPage() {
     event.preventDefault();
     setError(null);
     setSubmitting(true);
+
+    if (subscriptionExpired) {
+      setError('Tu periodo esta vencido. Renova la suscripcion para publicar.');
+      setSubmitting(false);
+      return;
+    }
 
     if (!user) {
       setError('Debes iniciar sesion antes de publicar.');
@@ -264,7 +486,20 @@ export default function PublicarPage() {
 
     try {
       const id = crypto.randomUUID();
-      const imageUrl = file ? await uploadFile(`publicaciones/${user.uid}/${id}`, file) : '';
+      setReviewingMedia(true);
+      if (mediaFile && mediaKind) {
+        await moderatePublicationMedia({
+          file: mediaFile,
+          mediaKind,
+          titulo,
+          descripcion,
+          categoria,
+          tipo
+        });
+      }
+      setReviewingMedia(false);
+
+      const mediaUrl = mediaFile ? await uploadFile(`publicaciones/${user.uid}/${id}`, mediaFile) : '';
       const comercioId = profile?.comercioId ?? user.uid;
 
       await createPublication({
@@ -274,7 +509,11 @@ export default function PublicarPage() {
         titulo,
         descripcion,
         precio: precio ? Number(precio) : null,
-        imagenUrl: imageUrl,
+        imagenUrl: mediaKind === 'image' ? mediaUrl : '',
+        mediaUrl,
+        mediaType: mediaKind ?? 'image',
+        duracionSegundos: mediaKind === 'video' && videoDuration ? Math.round(videoDuration) : undefined,
+        moderacionEstado: 'approved',
         categoria,
         ciudad: comercio?.ciudad ?? 'Ciudad',
         activo: true,
@@ -285,6 +524,7 @@ export default function PublicarPage() {
     } catch (publishError) {
       setError(getFirebasePublishMessage(publishError));
     } finally {
+      setReviewingMedia(false);
       setSubmitting(false);
     }
   };
@@ -311,6 +551,16 @@ export default function PublicarPage() {
     );
   }
 
+  if (subscriptionExpired) {
+    return (
+      <main className="min-h-screen bg-surface px-4 pb-28 pt-24 text-slate-950 sm:px-6">
+        <div className="mx-auto max-w-5xl">
+          <RenewalNotice owner={profile} showBackLink />
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-surface px-4 pb-28 pt-24 text-slate-950 sm:px-6">
       <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-[1fr_360px]">
@@ -319,7 +569,7 @@ export default function PublicarPage() {
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.26em] text-accent">Publicar</p>
               <h1 className="mt-2 text-3xl font-semibold">Nueva publicacion</h1>
-              <p className="mt-2 text-sm leading-6 text-slate-600">Carga una foto y usa la IA para escribir una descripcion mas clara.</p>
+              <p className="mt-2 text-sm leading-6 text-slate-600">Carga una foto o video corto y usa la IA para escribir una descripcion mas clara.</p>
             </div>
             {comercio ? (
               <Link href={`/comercios/${comercio.id}`} className="rounded-2xl bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-200">
@@ -331,41 +581,44 @@ export default function PublicarPage() {
           <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
             <div>
               <label htmlFor="imagen" className="mb-2 block text-sm font-semibold text-slate-700">
-                Foto
+                Foto o video
               </label>
               <label htmlFor="imagen" className="flex cursor-pointer flex-col items-center justify-center rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-5 text-center transition hover:border-accent hover:bg-red-50/40">
-                {preparingImage ? (
+                {preparingMedia ? (
                   <>
                     <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
-                    <span className="mt-3 text-sm font-semibold text-slate-700">Preparando foto...</span>
+                    <span className="mt-3 text-sm font-semibold text-slate-700">Preparando archivo...</span>
                   </>
+                ) : previewUrl && mediaKind === 'video' ? (
+                  <video src={previewUrl} className="max-h-72 w-full rounded-2xl bg-black object-contain" controls muted playsInline preload="metadata" />
                 ) : previewUrl ? (
                   <img src={previewUrl} alt="Vista previa" className="max-h-72 w-full rounded-2xl object-cover" />
                 ) : (
                   <>
                     <ImagePlus className="h-8 w-8 text-slate-400" />
-                    <span className="mt-3 text-sm font-semibold text-slate-700">Subir foto del producto o servicio</span>
-                    <span className="mt-1 text-xs text-slate-500">JPG, PNG o WebP. La app reduce fotos grandes.</span>
+                    <span className="mt-3 text-sm font-semibold text-slate-700">Subir foto o video del producto o servicio</span>
+                    <span className="mt-1 text-xs text-slate-500">JPG, PNG, WebP, MP4, WebM o MOV. Videos hasta 20 segundos.</span>
                   </>
                 )}
                 <input
                   id="imagen"
                   type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  onChange={handleImageChange}
+                  accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime"
+                  onChange={handleMediaChange}
                   className="sr-only"
                 />
               </label>
+              {videoDuration ? <p className="mt-2 text-xs font-semibold text-slate-500">Video de {Math.round(videoDuration)} segundos</p> : null}
             </div>
 
             <button
               type="button"
               onClick={handleAnalyze}
-              disabled={analyzing || preparingImage || !file}
+              disabled={analyzing || preparingMedia || !mediaFile}
               className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {analyzing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-              {analyzing ? 'Analizando foto...' : 'Generar texto con IA'}
+              {analyzing ? 'Analizando...' : 'Generar texto con IA'}
             </button>
 
             <div>
@@ -452,10 +705,10 @@ export default function PublicarPage() {
             <button
               type="submit"
               className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-accent px-5 py-4 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-70"
-              disabled={submitting || preparingImage}
+              disabled={submitting || preparingMedia || reviewingMedia}
             >
-              <Send className="h-4 w-4" />
-              {submitting ? 'Publicando...' : 'Publicar ahora'}
+              {reviewingMedia || submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              {reviewingMedia ? 'Revisando con IA...' : submitting ? 'Publicando...' : 'Publicar ahora'}
             </button>
           </form>
         </section>
@@ -466,7 +719,7 @@ export default function PublicarPage() {
               <Sparkles className="h-5 w-5 text-accent" />
               <h2 className="text-lg font-semibold text-slate-950">Asistente IA</h2>
             </div>
-            <p className="mt-3 text-sm leading-6 text-slate-600">La sugerencia se genera desde la foto. Luego podes editar todo antes de publicar.</p>
+            <p className="mt-3 text-sm leading-6 text-slate-600">La sugerencia se genera desde la foto o un fotograma del video. Luego podes editar todo antes de publicar.</p>
           </div>
 
           {aiSuggestion ? (

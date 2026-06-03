@@ -9,6 +9,12 @@ service firebase.storage {
       return isAuthenticated() && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.rol in ['admin', 'superadmin'];
     }
 
+    function hasUsableSubscription(userId) {
+      let profile = firestore.get(/databases/(default)/documents/users/$(userId)).data;
+      return !(profile.suscripcionEstado in ['expired', 'cancelled'])
+        && (!('suscripcionVenceAt' in profile) || profile.suscripcionVenceAt > request.time);
+    }
+
     function isOwnerRequest() {
       return isAuthenticated() && request.resource != null && request.resource.metadata.owner == request.auth.uid;
     }
@@ -27,22 +33,28 @@ service firebase.storage {
         && request.resource.contentType.matches('image/.*');
     }
 
+    function isValidPublicationMedia() {
+      return request.resource != null
+        && request.resource.size < 25 * 1024 * 1024
+        && (request.resource.contentType.matches('image/.*') || request.resource.contentType.matches('video/.*'));
+    }
+
     match /publicaciones/{ownerId}/{publicationId} {
       allow read: if true;
-      allow create, update: if isValidImage() && (isPathOwner(ownerId) || isAdmin());
-      allow delete: if isPathOwner(ownerId) || isAdmin();
+      allow create, update: if isValidPublicationMedia() && ((isPathOwner(ownerId) && hasUsableSubscription(ownerId)) || isAdmin());
+      allow delete: if (isPathOwner(ownerId) && hasUsableSubscription(ownerId)) || isAdmin();
     }
 
     match /publicaciones/{publicationId} {
       allow read: if true;
-      allow create, update: if isValidImage() && (isOwnerRequest() || isAdmin());
-      allow delete: if isOwnerResource() || isAdmin();
+      allow create, update: if isValidPublicationMedia() && ((isOwnerRequest() && hasUsableSubscription(request.auth.uid)) || isAdmin());
+      allow delete: if (isOwnerResource() && hasUsableSubscription(request.auth.uid)) || isAdmin();
     }
 
     match /comercios/{commerceId}/{allPaths=**} {
       allow read: if true;
-      allow create, update: if isValidImage() && (isOwnerRequest() || isAdmin());
-      allow delete: if isOwnerResource() || isAdmin();
+      allow create, update: if isValidImage() && ((isOwnerRequest() && hasUsableSubscription(request.auth.uid)) || isAdmin());
+      allow delete: if (isOwnerResource() && hasUsableSubscription(request.auth.uid)) || isAdmin();
     }
 
     match /{allPaths=**} {

@@ -1,5 +1,6 @@
 import { collection, doc, getDoc, getDocs, getFirestore, query, setDoc, where } from 'firebase/firestore';
 import { getFirebaseApp } from './firebase';
+import { isCommercePubliclyVisible } from '@/lib/subscription';
 import type { Categoria, Comercio, Publicacion, UsuarioApp } from '@/types';
 
 function getFirestoreInstance() {
@@ -38,14 +39,22 @@ export async function createPublication(publicacion: Publicacion) {
 }
 
 export async function getLatestPublications(limit = 10): Promise<Publicacion[]> {
-  const publicacionesQuery = activePublicacionesQuery();
-  const querySnapshot = await getDocs(publicacionesQuery);
-  return querySnapshot.docs.map((docItem) => docItem.data() as Publicacion).slice(0, limit);
+  const [querySnapshot, comercios] = await Promise.all([getDocs(activePublicacionesQuery()), getAllComercios()]);
+  const visibleCommerceIds = new Set(comercios.map((comercio) => comercio.id));
+
+  return querySnapshot.docs
+    .map((docItem) => docItem.data() as Publicacion)
+    .filter((publicacion) => visibleCommerceIds.has(publicacion.comercioId))
+    .slice(0, limit);
 }
 
 export async function getAllPublications(): Promise<Publicacion[]> {
-  const querySnapshot = await getDocs(activePublicacionesQuery());
-  return querySnapshot.docs.map((docItem) => docItem.data() as Publicacion);
+  const [querySnapshot, comercios] = await Promise.all([getDocs(activePublicacionesQuery()), getAllComercios()]);
+  const visibleCommerceIds = new Set(comercios.map((comercio) => comercio.id));
+
+  return querySnapshot.docs
+    .map((docItem) => docItem.data() as Publicacion)
+    .filter((publicacion) => visibleCommerceIds.has(publicacion.comercioId));
 }
 
 export async function getPublicationsByCommerce(comercioId: string): Promise<Publicacion[]> {
@@ -60,7 +69,7 @@ export async function getPublicationsByCommerce(comercioId: string): Promise<Pub
 
 export async function getAllComercios(): Promise<Comercio[]> {
   const querySnapshot = await getDocs(activeComerciosQuery());
-  return querySnapshot.docs.map((docItem) => docItem.data() as Comercio);
+  return querySnapshot.docs.map((docItem) => docItem.data() as Comercio).filter(isCommercePubliclyVisible);
 }
 
 export async function getAllComerciosForAdmin(): Promise<Comercio[]> {

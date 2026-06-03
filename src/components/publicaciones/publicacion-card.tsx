@@ -8,10 +8,12 @@ import { formatPrice } from '@/lib/utils/format';
 
 export function PublicacionCard({ publicacion }: { publicacion: Publicacion }) {
   const [activeImageIndex, setActiveImageIndex] = useState<number | null>(null);
-  const imageItems: LightboxImage[] = publicacion.imagenUrl
+  const mediaUrl = publicacion.mediaUrl || publicacion.imagenUrl;
+  const isVideo = publicacion.mediaType === 'video' && Boolean(mediaUrl);
+  const imageItems: LightboxImage[] = !isVideo && mediaUrl
     ? [
         {
-          src: publicacion.imagenUrl,
+          src: mediaUrl,
           alt: publicacion.titulo
         }
       ]
@@ -21,14 +23,16 @@ export function PublicacionCard({ publicacion }: { publicacion: Publicacion }) {
     <>
       <article className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-soft transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-glow">
         <div className="aspect-[4/3] overflow-hidden bg-slate-100">
-          {publicacion.imagenUrl ? (
+          {isVideo ? (
+            <video src={mediaUrl} className="h-full w-full bg-black object-cover" controls muted playsInline preload="metadata" />
+          ) : mediaUrl ? (
             <button
               type="button"
               onClick={() => setActiveImageIndex(0)}
               className="group h-full w-full cursor-zoom-in focus:outline-none focus:ring-2 focus:ring-accent focus:ring-inset"
               aria-label={`Ampliar imagen de ${publicacion.titulo}`}
             >
-              <img src={publicacion.imagenUrl} alt={publicacion.titulo} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+              <img src={mediaUrl} alt={publicacion.titulo} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
             </button>
           ) : (
           <div className="flex h-full items-center justify-center bg-slate-100 text-slate-400">
