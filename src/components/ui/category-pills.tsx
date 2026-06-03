@@ -4,9 +4,12 @@ type CategoryPillsProps = {
   categories: Category[];
   selectedCategory: string;
   onSelectCategory: (category: string) => void;
+  size?: 'regular' | 'compact';
 };
 
-export function CategoryPills({ categories, selectedCategory, onSelectCategory }: CategoryPillsProps) {
+export function CategoryPills({ categories, selectedCategory, onSelectCategory, size = 'regular' }: CategoryPillsProps) {
+  const buttonSize = size === 'compact' ? 'rounded-lg px-2.5 py-1.5 text-xs' : 'rounded-xl px-3 py-2 text-sm';
+
   return (
     <div className="scrollbar-none flex gap-2 overflow-x-auto pb-1">
       {categories.map((category) => {
@@ -17,7 +20,7 @@ export function CategoryPills({ categories, selectedCategory, onSelectCategory }
             type="button"
             aria-pressed={selected}
             onClick={() => onSelectCategory(category.id)}
-            className={`min-w-max rounded-xl border px-3 py-2 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-slate-300 focus:ring-offset-2 ${
+            className={`min-w-max border font-semibold transition focus:outline-none focus:ring-2 focus:ring-slate-300 focus:ring-offset-2 ${buttonSize} ${
               selected
                 ? 'border-slate-950 bg-slate-950 text-white shadow-soft'
                 : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950'

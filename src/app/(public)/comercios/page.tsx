@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { CategoryPills } from '@/components/ui/category-pills';
 import { CommerceCard } from '@/components/comercios/commerce-card';
+import { FilterSelect } from '@/components/ui/filter-select';
 import { SearchBar } from '@/components/ui/search-bar';
 import { adminContactMessage, adminWhatsapp } from '@/lib/admin-contact';
 import { categories } from '@/lib/categories';
@@ -87,51 +88,53 @@ export default function ComerciosPage() {
   );
 
   return (
-    <main className="min-h-screen bg-surface px-4 pb-28 pt-24 text-slate-950 sm:px-6">
-      <div className="mx-auto max-w-6xl space-y-6">
-        <section className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.26em] text-accent">Guia completa</p>
-            <h1 className="mt-2 text-3xl font-semibold sm:text-4xl">Explorar comercios y servicios</h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">Filtra contactos por ciudad, rubro, categoria, WhatsApp y ubicacion sin crear cuenta.</p>
+    <main className="min-h-screen bg-surface px-3 pb-24 pt-20 text-slate-950 sm:px-5">
+      <div className="mx-auto max-w-7xl space-y-4">
+        <section className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-accent">Guia completa</p>
+              <h1 className="mt-1 text-2xl font-semibold sm:text-3xl">Comercios y servicios</h1>
+              <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-600 sm:text-sm">Busca, compara y entra a la ficha del comercio para ver fotos, publicaciones, ubicacion y contacto.</p>
+            </div>
+            <a
+              href={buildWhatsappUrl(adminWhatsapp, adminContactMessage)}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-md bg-emerald-600 px-3 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-700"
+            >
+              <MessageCircle className="h-4 w-4" />
+              Quiero aparecer
+            </a>
           </div>
-          <a
-            href={buildWhatsappUrl(adminWhatsapp, adminContactMessage)}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-soft transition hover:bg-emerald-700"
-          >
-            <MessageCircle className="h-4 w-4" />
-            Quiero aparecer
-          </a>
         </section>
 
-        <section className="space-y-3">
+        <section className="space-y-2">
           <SearchBar
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             onSubmit={handleSearch}
             placeholder="Buscar por nombre, rubro o direccion"
             buttonLabel="Buscar"
+            size="compact"
           />
-          <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-soft">
+          <div className="space-y-3 rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
             <div className="flex items-center justify-between gap-3">
               <p className="text-sm font-semibold text-slate-950">Filtros</p>
               <span className="text-xs font-semibold text-slate-500">{filteredComercios.length} resultados</span>
             </div>
-            <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Ciudad</p>
-              <CategoryPills categories={cityOptions} selectedCategory={selectedCity} onSelectCategory={handleSelectCity} />
-            </div>
-            <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Categoria de negocio</p>
-              <CategoryPills categories={categories} selectedCategory={selectedCategory} onSelectCategory={handleSelectCategory} />
+            <div className="grid gap-3 lg:grid-cols-[240px_1fr] lg:items-end">
+              <FilterSelect id="city-filter" label="Ciudad" value={selectedCity} options={cityOptions} onChange={handleSelectCity} />
+              <div className="min-w-0">
+                <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Categoria</p>
+                <CategoryPills categories={categories} selectedCategory={selectedCategory} onSelectCategory={handleSelectCategory} size="compact" />
+              </div>
             </div>
           </div>
         </section>
 
-        <section className="space-y-3">
-          <div className="flex items-center justify-between gap-4">
+        <section className="space-y-2">
+          <div className="flex items-center justify-between gap-3">
             <p className="text-sm font-semibold text-slate-700">
               {filteredComercios.length} comercios encontrados{selectedCity !== 'Todas' ? ` en ${selectedCity}` : ''}
             </p>
@@ -140,13 +143,13 @@ export default function ComerciosPage() {
             </Link>
           </div>
 
-          <div className="space-y-3">
+          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
             {loading ? (
-              <p className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-500 shadow-soft">Cargando comercios...</p>
+              <p className="rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-500 shadow-sm sm:col-span-2 xl:col-span-3">Cargando comercios...</p>
             ) : filteredComercios.length > 0 ? (
               filteredComercios.map((comercio) => <CommerceCard key={comercio.id} comercio={comercio} />)
             ) : (
-              <p className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-500 shadow-soft">No se encontraron comercios con esos filtros.</p>
+              <p className="rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-500 shadow-sm sm:col-span-2 xl:col-span-3">No se encontraron comercios con esos filtros.</p>
             )}
           </div>
         </section>
