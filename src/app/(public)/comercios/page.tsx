@@ -4,12 +4,11 @@ import Link from 'next/link';
 import { MessageCircle } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { CategoryPills } from '@/components/ui/category-pills';
 import { CommerceCard } from '@/components/comercios/commerce-card';
 import { FilterSelect } from '@/components/ui/filter-select';
 import { SearchBar } from '@/components/ui/search-bar';
 import { adminContactMessage, adminWhatsapp } from '@/lib/admin-contact';
-import { categories } from '@/lib/categories';
+import { categoryGroups, categoryMatchesGroup, getCategoriesForGroup, getCategoryGroupForCategory } from '@/lib/categories';
 import { cityMatches, getCityOptions } from '@/lib/cities';
 import { getAllComercios } from '@/lib/firebase/firestore';
 import { sampleComercios } from '@/lib/mockData';
@@ -22,6 +21,9 @@ export default function ComerciosPage() {
   const [comercios, setComercios] = useState<Comercio[]>(sampleComercios);
   const [search, setSearch] = useState(searchParams.get('search') ?? '');
   const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') ?? 'Todos');
+  const [selectedCategoryGroup, setSelectedCategoryGroup] = useState(
+    searchParams.get('group') ?? getCategoryGroupForCategory(searchParams.get('category') ?? 'Todos')
+  );
   const [selectedCity, setSelectedCity] = useState(searchParams.get('city') ?? 'Todas');
   const [loading, setLoading] = useState(true);
 
@@ -41,25 +43,42 @@ export default function ComerciosPage() {
   }, []);
 
   useEffect(() => {
+    const nextCategory = searchParams.get('category') ?? 'Todos';
     setSearch(searchParams.get('search') ?? '');
-    setSelectedCategory(searchParams.get('category') ?? 'Todos');
+    setSelectedCategory(nextCategory);
+    setSelectedCategoryGroup(searchParams.get('group') ?? getCategoryGroupForCategory(nextCategory));
     setSelectedCity(searchParams.get('city') ?? 'Todas');
   }, [searchParams]);
 
   const cityOptions = useMemo(() => getCityOptions(comercios), [comercios]);
+  const categoryOptions = useMemo(() => getCategoriesForGroup(selectedCategoryGroup), [selectedCategoryGroup]);
 
   const handleSearch = () => {
     const params = new URLSearchParams();
     if (search.trim()) params.set('search', search.trim());
+    if (selectedCategoryGroup !== 'Todos') params.set('group', selectedCategoryGroup);
     if (selectedCategory !== 'Todos') params.set('category', selectedCategory);
     if (selectedCity !== 'Todas') params.set('city', selectedCity);
     router.push(`/comercios${params.toString() ? `?${params.toString()}` : ''}`);
   };
 
-  const handleSelectCategory = (category: string) => {
-    setSelectedCategory(category);
+  const handleSelectCategoryGroup = (group: string) => {
+    setSelectedCategoryGroup(group);
+    setSelectedCategory('Todos');
     const params = new URLSearchParams();
     if (search.trim()) params.set('search', search.trim());
+    if (group !== 'Todos') params.set('group', group);
+    if (selectedCity !== 'Todas') params.set('city', selectedCity);
+    router.push(`/comercios${params.toString() ? `?${params.toString()}` : ''}`);
+  };
+
+  const handleSelectCategory = (category: string) => {
+    const group = category === 'Todos' ? selectedCategoryGroup : getCategoryGroupForCategory(category);
+    setSelectedCategory(category);
+    setSelectedCategoryGroup(group);
+    const params = new URLSearchParams();
+    if (search.trim()) params.set('search', search.trim());
+    if (group !== 'Todos') params.set('group', group);
     if (category !== 'Todos') params.set('category', category);
     if (selectedCity !== 'Todas') params.set('city', selectedCity);
     router.push(`/comercios${params.toString() ? `?${params.toString()}` : ''}`);
@@ -69,6 +88,7 @@ export default function ComerciosPage() {
     setSelectedCity(city);
     const params = new URLSearchParams();
     if (search.trim()) params.set('search', search.trim());
+    if (selectedCategoryGroup !== 'Todos') params.set('group', selectedCategoryGroup);
     if (selectedCategory !== 'Todos') params.set('category', selectedCategory);
     if (city !== 'Todas') params.set('city', city);
     router.push(`/comercios${params.toString() ? `?${params.toString()}` : ''}`);
@@ -77,14 +97,17 @@ export default function ComerciosPage() {
   const filteredComercios = useMemo(
     () =>
       comercios.filter((comercio) => {
-        const matchesCategory = selectedCategory === 'Todos' || comercio.categoria === selectedCategory;
+        const matchesCategory =
+          selectedCategory === 'Todos'
+            ? categoryMatchesGroup(comercio.categoria, selectedCategoryGroup)
+            : comercio.categoria === selectedCategory;
         const matchesCity = cityMatches(comercio.ciudad, selectedCity);
         const matchesSearch = `${comercio.nombre} ${comercio.rubro} ${comercio.categoria} ${comercio.direccion}`
           .toLowerCase()
           .includes(search.toLowerCase());
         return matchesCategory && matchesCity && matchesSearch;
       }),
-    [comercios, search, selectedCategory, selectedCity]
+    [comercios, search, selectedCategory, selectedCategoryGroup, selectedCity]
   );
 
   return (
@@ -123,12 +146,10 @@ export default function ComerciosPage() {
               <p className="text-sm font-semibold text-slate-950">Filtros</p>
               <span className="text-xs font-semibold text-slate-500">{filteredComercios.length} resultados</span>
             </div>
-            <div className="grid gap-3 lg:grid-cols-[240px_1fr] lg:items-end">
+            <div className="grid gap-3 sm:grid-cols-3">
               <FilterSelect id="city-filter" label="Ciudad" value={selectedCity} options={cityOptions} onChange={handleSelectCity} />
-              <div className="min-w-0">
-                <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Categoria</p>
-                <CategoryPills categories={categories} selectedCategory={selectedCategory} onSelectCategory={handleSelectCategory} size="compact" />
-              </div>
+              <FilterSelect id="category-group-filter" label="Grupo" value={selectedCategoryGroup} options={categoryGroups} onChange={handleSelectCategoryGroup} />
+              <FilterSelect id="category-filter" label="Categoria" value={selectedCategory} options={categoryOptions} onChange={handleSelectCategory} />
             </div>
           </div>
         </section>

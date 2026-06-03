@@ -6,12 +6,11 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { CommerceCard } from '@/components/comercios/commerce-card';
 import { PublicacionCard } from '@/components/publicaciones/publicacion-card';
-import { CategoryPills } from '@/components/ui/category-pills';
 import { FilterSelect } from '@/components/ui/filter-select';
 import { SearchBar } from '@/components/ui/search-bar';
 import { ShareAppButton } from '@/components/ui/share-app-button';
 import { adminContactMessage, adminWhatsapp } from '@/lib/admin-contact';
-import { categories } from '@/lib/categories';
+import { categoryGroups, categoryMatchesGroup, getCategoriesForGroup, getCategoryGroupForCategory } from '@/lib/categories';
 import { cityMatches, getCityOptions } from '@/lib/cities';
 import { getAllComercios, getLatestPublications } from '@/lib/firebase/firestore';
 import { sampleComercios, samplePublicaciones } from '@/lib/mockData';
@@ -24,6 +23,7 @@ export default function Home() {
   const [publicaciones, setPublicaciones] = useState<Publicacion[]>(samplePublicaciones);
   const [searchValue, setSearchValue] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Todos');
+  const [selectedCategoryGroup, setSelectedCategoryGroup] = useState('Todos');
   const [selectedCity, setSelectedCity] = useState('Todas');
   const [loadingComercios, setLoadingComercios] = useState(true);
   const [loadingPublicaciones, setLoadingPublicaciones] = useState(true);
@@ -60,7 +60,10 @@ export default function Home() {
     const normalizedSearch = searchValue.toLowerCase().trim();
 
     return comercios.filter((comercio) => {
-      const matchesCategory = selectedCategory === 'Todos' || comercio.categoria === selectedCategory;
+      const matchesCategory =
+        selectedCategory === 'Todos'
+          ? categoryMatchesGroup(comercio.categoria, selectedCategoryGroup)
+          : comercio.categoria === selectedCategory;
       const matchesCity = cityMatches(comercio.ciudad, selectedCity);
       const matchesSearch = [comercio.nombre, comercio.rubro, comercio.categoria, comercio.direccion]
         .join(' ')
@@ -68,9 +71,21 @@ export default function Home() {
         .includes(normalizedSearch);
       return matchesCategory && matchesCity && matchesSearch;
     });
-  }, [comercios, searchValue, selectedCategory, selectedCity]);
+  }, [comercios, searchValue, selectedCategory, selectedCategoryGroup, selectedCity]);
 
   const cityOptions = useMemo(() => getCityOptions(comercios), [comercios]);
+  const categoryOptions = useMemo(() => getCategoriesForGroup(selectedCategoryGroup), [selectedCategoryGroup]);
+  const handleSelectCategoryGroup = (group: string) => {
+    setSelectedCategoryGroup(group);
+    setSelectedCategory('Todos');
+  };
+
+  const handleSelectCategory = (category: string) => {
+    setSelectedCategory(category);
+    if (category !== 'Todos') {
+      setSelectedCategoryGroup(getCategoryGroupForCategory(category));
+    }
+  };
 
   const handleSearch = () => {
     const params = new URLSearchParams();
@@ -81,6 +96,8 @@ export default function Home() {
 
     if (selectedCategory !== 'Todos') {
       params.set('category', selectedCategory);
+    } else if (selectedCategoryGroup !== 'Todos') {
+      params.set('group', selectedCategoryGroup);
     }
 
     if (selectedCity !== 'Todas') {
@@ -170,12 +187,10 @@ export default function Home() {
               <p className="text-sm font-semibold text-slate-950">Filtros rapidos</p>
               <span className="text-xs font-semibold text-slate-500">{visibleComercios.length} resultados</span>
             </div>
-            <div className="grid gap-3 lg:grid-cols-[240px_1fr] lg:items-end">
+            <div className="grid gap-3 sm:grid-cols-3">
               <FilterSelect id="home-city-filter" label="Ciudad" value={selectedCity} options={cityOptions} onChange={setSelectedCity} />
-              <div className="min-w-0">
-                <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Categoria</p>
-                <CategoryPills categories={categories} selectedCategory={selectedCategory} onSelectCategory={setSelectedCategory} size="compact" />
-              </div>
+              <FilterSelect id="home-category-group-filter" label="Grupo" value={selectedCategoryGroup} options={categoryGroups} onChange={handleSelectCategoryGroup} />
+              <FilterSelect id="home-category-filter" label="Categoria" value={selectedCategory} options={categoryOptions} onChange={handleSelectCategory} />
             </div>
           </div>
           <a
