@@ -28,8 +28,9 @@ import { ShareAppButton } from '@/components/ui/share-app-button';
 import { adminContactMessage, adminWhatsapp } from '@/lib/admin-contact';
 import { categoryGroups, categoryMatchesGroup, getCategoriesForGroup, getCategoryGroupForCategory } from '@/lib/categories';
 import { cityMatches, getCityOptions } from '@/lib/cities';
-import { getAllComercios, getLatestPublications } from '@/lib/firebase/firestore';
+import { getAllComercios, getAllPublications } from '@/lib/firebase/firestore';
 import { sampleComercios, samplePublicaciones } from '@/lib/mockData';
+import { matchesCommerceSearch } from '@/lib/search';
 import { buildWhatsappUrl } from '@/lib/utils/format';
 import type { Comercio, Publicacion } from '@/types';
 
@@ -74,7 +75,7 @@ export default function Home() {
 
     const loadPublicaciones = async () => {
       try {
-        const publicacionesData = await getLatestPublications(4);
+        const publicacionesData = await getAllPublications();
         setPublicaciones(publicacionesData);
       } catch {
         setPublicaciones(samplePublicaciones);
@@ -87,22 +88,26 @@ export default function Home() {
     loadPublicaciones();
   }, []);
 
-  const visibleComercios = useMemo(() => {
-    const normalizedSearch = searchValue.toLowerCase().trim();
+  const publicacionesByCommerceId = useMemo(() => {
+    return publicaciones.reduce((map, publicacion) => {
+      const current = map.get(publicacion.comercioId) ?? [];
+      current.push(publicacion);
+      map.set(publicacion.comercioId, current);
+      return map;
+    }, new Map<string, Publicacion[]>());
+  }, [publicaciones]);
 
+  const visibleComercios = useMemo(() => {
     return comercios.filter((comercio) => {
       const matchesCategory =
         selectedCategory === 'Todos'
           ? categoryMatchesGroup(comercio.categoria, selectedCategoryGroup)
           : comercio.categoria === selectedCategory;
       const matchesCity = cityMatches(comercio.ciudad, selectedCity);
-      const matchesSearch = [comercio.nombre, comercio.rubro, comercio.categoria, comercio.direccion]
-        .join(' ')
-        .toLowerCase()
-        .includes(normalizedSearch);
+      const matchesSearch = matchesCommerceSearch(comercio, searchValue, publicacionesByCommerceId.get(comercio.id) ?? []);
       return matchesCategory && matchesCity && matchesSearch;
     });
-  }, [comercios, searchValue, selectedCategory, selectedCategoryGroup, selectedCity]);
+  }, [comercios, publicacionesByCommerceId, searchValue, selectedCategory, selectedCategoryGroup, selectedCity]);
 
   const cityOptions = useMemo(() => getCityOptions(comercios), [comercios]);
   const categoryOptions = useMemo(() => getCategoriesForGroup(selectedCategoryGroup), [selectedCategoryGroup]);
@@ -213,7 +218,7 @@ export default function Home() {
                   type="search"
                   value={searchValue}
                   onChange={(event) => setSearchValue(event.target.value)}
-                  placeholder="Buscar productos, servicios, marcas o ciudades"
+                  placeholder="Buscar ciudad, categoria, grupo, negocio, contacto o articulo"
                   className="h-10 min-w-0 flex-1 px-3 text-[13px] font-semibold text-slate-900 outline-none placeholder:text-slate-400"
                 />
                 <button

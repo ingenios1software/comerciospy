@@ -14,7 +14,7 @@ export function SearchBar({
   value = '',
   onChange,
   onSubmit,
-  placeholder = 'Buscar comercios, ofertas o ciudad',
+  placeholder = 'Buscar ciudad, categoria, grupo, contacto o articulo',
   buttonLabel = 'Buscar',
   size = 'regular'
 }: SearchBarProps) {

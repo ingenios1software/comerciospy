@@ -43,6 +43,7 @@ export type Comercio = {
   id: string;
   ownerId?: string;
   nombre: string;
+  contactoNombre?: string;
   rubro: string;
   descripcion: string;
   resumen?: string;

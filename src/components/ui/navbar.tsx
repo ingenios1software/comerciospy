@@ -62,7 +62,7 @@ export function Navbar() {
                 type="search"
                 value={searchValue}
                 onChange={(event) => setSearchValue(event.target.value)}
-                placeholder="Buscar comercios, servicios y ciudades"
+                placeholder="Buscar ciudad, categoria, grupo, negocio, contacto o articulo"
                 className="min-w-0 flex-1 px-3 text-[12px] font-medium text-slate-900 outline-none placeholder:text-slate-400"
               />
               <button type="submit" className="flex w-10 items-center justify-center border-l border-slate-200 text-slate-500 transition hover:bg-slate-50" aria-label="Buscar">

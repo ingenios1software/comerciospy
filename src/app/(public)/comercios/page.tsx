@@ -10,15 +10,17 @@ import { SearchBar } from '@/components/ui/search-bar';
 import { adminContactMessage, adminWhatsapp } from '@/lib/admin-contact';
 import { categoryGroups, categoryMatchesGroup, getCategoriesForGroup, getCategoryGroupForCategory } from '@/lib/categories';
 import { cityMatches, getCityOptions } from '@/lib/cities';
-import { getAllComercios } from '@/lib/firebase/firestore';
-import { sampleComercios } from '@/lib/mockData';
+import { getAllComercios, getAllPublications } from '@/lib/firebase/firestore';
+import { sampleComercios, samplePublicaciones } from '@/lib/mockData';
+import { matchesCommerceSearch } from '@/lib/search';
 import { buildWhatsappUrl } from '@/lib/utils/format';
-import type { Comercio } from '@/types';
+import type { Comercio, Publicacion } from '@/types';
 
 export default function ComerciosPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [comercios, setComercios] = useState<Comercio[]>(sampleComercios);
+  const [publicaciones, setPublicaciones] = useState<Publicacion[]>(samplePublicaciones);
   const [search, setSearch] = useState(searchParams.get('search') ?? '');
   const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') ?? 'Todos');
   const [selectedCategoryGroup, setSelectedCategoryGroup] = useState(
@@ -29,14 +31,11 @@ export default function ComerciosPage() {
 
   useEffect(() => {
     const loadComercios = async () => {
-      try {
-        const data = await getAllComercios();
-        setComercios(data);
-      } catch {
-        setComercios(sampleComercios);
-      } finally {
-        setLoading(false);
-      }
+      const [comerciosResult, publicacionesResult] = await Promise.allSettled([getAllComercios(), getAllPublications()]);
+
+      setComercios(comerciosResult.status === 'fulfilled' ? comerciosResult.value : sampleComercios);
+      setPublicaciones(publicacionesResult.status === 'fulfilled' ? publicacionesResult.value : samplePublicaciones);
+      setLoading(false);
     };
 
     loadComercios();
@@ -52,6 +51,14 @@ export default function ComerciosPage() {
 
   const cityOptions = useMemo(() => getCityOptions(comercios), [comercios]);
   const categoryOptions = useMemo(() => getCategoriesForGroup(selectedCategoryGroup), [selectedCategoryGroup]);
+  const publicacionesByCommerceId = useMemo(() => {
+    return publicaciones.reduce((map, publicacion) => {
+      const current = map.get(publicacion.comercioId) ?? [];
+      current.push(publicacion);
+      map.set(publicacion.comercioId, current);
+      return map;
+    }, new Map<string, Publicacion[]>());
+  }, [publicaciones]);
 
   const handleSearch = () => {
     const params = new URLSearchParams();
@@ -102,12 +109,10 @@ export default function ComerciosPage() {
             ? categoryMatchesGroup(comercio.categoria, selectedCategoryGroup)
             : comercio.categoria === selectedCategory;
         const matchesCity = cityMatches(comercio.ciudad, selectedCity);
-        const matchesSearch = `${comercio.nombre} ${comercio.rubro} ${comercio.categoria} ${comercio.direccion}`
-          .toLowerCase()
-          .includes(search.toLowerCase());
+        const matchesSearch = matchesCommerceSearch(comercio, search, publicacionesByCommerceId.get(comercio.id) ?? []);
         return matchesCategory && matchesCity && matchesSearch;
       }),
-    [comercios, search, selectedCategory, selectedCategoryGroup, selectedCity]
+    [comercios, publicacionesByCommerceId, search, selectedCategory, selectedCategoryGroup, selectedCity]
   );
 
   return (
@@ -137,7 +142,7 @@ export default function ComerciosPage() {
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             onSubmit={handleSearch}
-            placeholder="Buscar por nombre, rubro o direccion"
+            placeholder="Buscar ciudad, categoria, grupo, contacto o articulo"
             buttonLabel="Buscar"
             size="compact"
           />
