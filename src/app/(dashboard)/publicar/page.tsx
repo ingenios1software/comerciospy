@@ -292,7 +292,7 @@ async function moderatePublicationMedia({
   categoria: string;
   tipo: Publicacion['tipo'];
 }): Promise<ModerationResult> {
-  const frames = mediaKind === 'video' ? await extractVideoFrames(file) : [await fileToDataUrl(file)];
+  const frames = mediaKind === 'video' ? await extractVideoFrames(file, 1) : [await fileToDataUrl(file)];
   const text = [`Titulo: ${titulo}`, `Descripcion: ${descripcion}`, `Categoria: ${categoria}`, `Tipo: ${tipo}`].join('\n');
 
   const response = await fetch('/api/ai/moderar-media', {

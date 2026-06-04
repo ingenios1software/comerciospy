@@ -18,7 +18,7 @@ type ModerationInput =
   | { type: 'text'; text: string }
   | { type: 'image_url'; image_url: { url: string } };
 
-const maxFrames = 6;
+const maxFrames = 1;
 const maxFrameBytes = 8 * 1024 * 1024;
 
 function getDataUrlBytes(dataUrl: string) {
