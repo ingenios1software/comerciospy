@@ -9,6 +9,10 @@ service firebase.storage {
       return isAuthenticated() && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.rol in ['admin', 'superadmin'];
     }
 
+    function isCommerceUser() {
+      return isAuthenticated() && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.rol == 'comercio';
+    }
+
     function hasUsableSubscription(userId) {
       let profile = firestore.get(/databases/(default)/documents/users/$(userId)).data;
       return !(profile.suscripcionEstado in ['expired', 'cancelled'])
@@ -41,19 +45,19 @@ service firebase.storage {
 
     match /publicaciones/{ownerId}/{publicationId} {
       allow read: if true;
-      allow create, update: if isValidPublicationMedia() && ((isPathOwner(ownerId) && hasUsableSubscription(ownerId)) || isAdmin());
+      allow create, update: if isValidPublicationMedia() && ((isPathOwner(ownerId) && isCommerceUser()) || isAdmin());
       allow delete: if (isPathOwner(ownerId) && hasUsableSubscription(ownerId)) || isAdmin();
     }
 
     match /publicaciones/{publicationId} {
       allow read: if true;
-      allow create, update: if isValidPublicationMedia() && ((isOwnerRequest() && hasUsableSubscription(request.auth.uid)) || isAdmin());
+      allow create, update: if isValidPublicationMedia() && ((isOwnerRequest() && isCommerceUser()) || isAdmin());
       allow delete: if (isOwnerResource() && hasUsableSubscription(request.auth.uid)) || isAdmin();
     }
 
     match /comercios/{commerceId}/{allPaths=**} {
       allow read: if true;
-      allow create, update: if isValidImage() && ((isOwnerRequest() && hasUsableSubscription(request.auth.uid)) || isAdmin());
+      allow create, update: if isValidImage() && ((isOwnerRequest() && isCommerceUser()) || isAdmin());
       allow delete: if (isOwnerResource() && hasUsableSubscription(request.auth.uid)) || isAdmin();
     }
 
