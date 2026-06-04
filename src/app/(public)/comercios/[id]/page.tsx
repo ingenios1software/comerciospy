@@ -193,11 +193,11 @@ export default function ComercioDetailPage() {
               Crear publicacion
             </Link>
           </div>
-          <div className="grid gap-3 lg:grid-cols-3">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {publicaciones.length > 0 ? (
-              publicaciones.map((publicacion) => <PublicacionCard key={publicacion.id} publicacion={publicacion} comercio={comercio} />)
+              publicaciones.map((publicacion) => <PublicacionCard key={publicacion.id} publicacion={publicacion} comercio={comercio} variant="compact" />)
             ) : (
-              <div className="rounded-2xl border border-slate-200 bg-white p-4 text-center text-sm text-slate-500 shadow-soft">No hay publicaciones para este comercio aun.</div>
+              <div className="col-span-2 rounded-2xl border border-slate-200 bg-white p-4 text-center text-sm text-slate-500 shadow-soft sm:col-span-3 lg:col-span-4 xl:col-span-5">No hay publicaciones para este comercio aun.</div>
             )}
           </div>
         </section>

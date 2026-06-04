@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { FormEvent, useState } from 'react';
-import { LogOut, MessageCircle, Search } from 'lucide-react';
+import { LogOut, MessageCircle, Search, ShoppingCart } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/firebase/auth-context';
 import { adminContactMessage, adminWhatsapp } from '@/lib/admin-contact';
@@ -34,12 +34,14 @@ export function Navbar() {
         { label: 'Inicio', href: '/' },
         { label: 'Guia', href: '/comercios' },
         { label: 'Favoritos', href: '/favoritos' },
+        { label: 'Carrito', href: '/carrito' },
         { label: 'Panel', href: '/dashboard' }
       ]
     : [
         { label: 'Inicio', href: '/' },
         { label: 'Buscar gratis', href: '/comercios' },
         { label: 'Favoritos', href: '/favoritos' },
+        { label: 'Carrito', href: '/carrito' },
         { label: 'Panel comercio', href: '/login' }
       ];
   const isActive = (href: string) => (href === '/' ? pathname === '/' : pathname.startsWith(href));
@@ -98,6 +100,9 @@ export function Navbar() {
                   <MessageCircle className="h-3.5 w-3.5" />
                   Quiero aparecer
                 </a>
+                <Link href="/carrito" className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-white/15 text-white transition hover:bg-white/25" aria-label="Abrir carrito">
+                  <ShoppingCart className="h-3.5 w-3.5" />
+                </Link>
               </>
             )}
           </div>

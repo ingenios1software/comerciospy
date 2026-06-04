@@ -1,7 +1,7 @@
 "use client";
 
 import Link from 'next/link';
-import { Heart, Home, List, LogOut, PlusCircle, Store, User, Users } from 'lucide-react';
+import { Heart, Home, List, LogOut, PlusCircle, ShoppingCart, Store, User, Users } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/firebase/auth-context';
 
@@ -25,7 +25,8 @@ export function BottomNavigation() {
     ? [
         { label: 'Inicio', href: '/', icon: Home },
         { label: 'Guia', href: '/comercios', icon: List },
-        { label: 'Favoritos', href: '/favoritos', icon: Heart }
+        { label: 'Favoritos', href: '/favoritos', icon: Heart },
+        { label: 'Carrito', href: '/carrito', icon: ShoppingCart }
       ]
     : user && profile?.rol === 'superadmin'
     ? [
@@ -47,6 +48,7 @@ export function BottomNavigation() {
         { label: 'Inicio', href: '/', icon: Home },
         { label: 'Buscar', href: '/comercios', icon: List },
         { label: 'Favoritos', href: '/favoritos', icon: Heart },
+        { label: 'Carrito', href: '/carrito', icon: ShoppingCart },
         { label: 'Comercio', href: '/login', icon: Store }
       ];
   const showLogout = !loading && Boolean(user);

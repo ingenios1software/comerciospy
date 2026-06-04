@@ -30,6 +30,14 @@ export default function FavoritosPage() {
 
   const comerciosById = useMemo(() => new Map(comercios.map((comercio) => [comercio.id, comercio])), [comercios]);
   const publicacionesById = useMemo(() => new Map(publicaciones.map((publicacion) => [publicacion.id, publicacion])), [publicaciones]);
+  const publicacionesByCommerceId = useMemo(() => {
+    return publicaciones.reduce((map, publicacion) => {
+      const current = map.get(publicacion.comercioId) ?? [];
+      current.push(publicacion);
+      map.set(publicacion.comercioId, current);
+      return map;
+    }, new Map<string, Publicacion[]>());
+  }, [publicaciones]);
 
   const favoriteComercios = useMemo(() => {
     return favorites
@@ -78,7 +86,9 @@ export default function FavoritosPage() {
               <section className="space-y-2">
                 <h2 className="text-base font-semibold text-slate-950">Comercios favoritos</h2>
                 <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-                  {favoriteComercios.map((comercio) => <CommerceCard key={comercio.id} comercio={comercio} />)}
+                  {favoriteComercios.map((comercio) => (
+                    <CommerceCard key={comercio.id} comercio={comercio} publicaciones={publicacionesByCommerceId.get(comercio.id) ?? []} />
+                  ))}
                 </div>
               </section>
             ) : null}
@@ -86,12 +96,13 @@ export default function FavoritosPage() {
             {favoritePublicaciones.length > 0 ? (
               <section className="space-y-2">
                 <h2 className="text-base font-semibold text-slate-950">Articulos favoritos</h2>
-                <div className="grid gap-3 lg:grid-cols-3">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
                   {favoritePublicaciones.map((publicacion) => (
                     <PublicacionCard
                       key={publicacion.id}
                       publicacion={publicacion}
                       comercio={comerciosById.get(publicacion.comercioId)}
+                      variant="compact"
                     />
                   ))}
                 </div>

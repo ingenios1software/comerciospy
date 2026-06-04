@@ -173,7 +173,9 @@ export default function ComerciosPage() {
             {loading ? (
               <p className="rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-500 shadow-sm sm:col-span-2 xl:col-span-3">Cargando comercios...</p>
             ) : filteredComercios.length > 0 ? (
-              filteredComercios.map((comercio) => <CommerceCard key={comercio.id} comercio={comercio} />)
+              filteredComercios.map((comercio) => (
+                <CommerceCard key={comercio.id} comercio={comercio} publicaciones={publicacionesByCommerceId.get(comercio.id) ?? []} />
+              ))
             ) : (
               <p className="rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-500 shadow-sm sm:col-span-2 xl:col-span-3">No se encontraron comercios con esos filtros.</p>
             )}

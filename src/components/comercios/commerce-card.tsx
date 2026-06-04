@@ -1,11 +1,13 @@
 import Link from 'next/link';
 import { ArrowUpRight, Clock, Images, MapPin, MessageCircle, Phone, Store } from 'lucide-react';
-import type { Comercio, CommercePreview } from '@/types';
+import type { Comercio, CommercePreview, Publicacion } from '@/types';
 import { FavoriteButton } from '@/components/favorites/favorite-button';
-import { buildMapsUrl, buildWhatsappUrl, cleanPhone } from '@/lib/utils/format';
+import { getPublicationCode, getPublicationMediaUrl } from '@/lib/publications';
+import { buildMapsUrl, buildWhatsappUrl, cleanPhone, formatPrice } from '@/lib/utils/format';
 
 type CommerceCardProps = {
   comercio: CommercePreview | (Comercio & { imagen?: string });
+  publicaciones?: Publicacion[];
 };
 
 function getMainImage(comercio: CommerceCardProps['comercio']) {
@@ -21,7 +23,12 @@ function getPhotos(comercio: CommerceCardProps['comercio']) {
   return [mainImage, ...photos].filter(Boolean).slice(0, 3);
 }
 
-export function CommerceCard({ comercio }: CommerceCardProps) {
+function getDateValue(value?: string) {
+  const time = value ? new Date(value).getTime() : 0;
+  return Number.isFinite(time) ? time : 0;
+}
+
+export function CommerceCard({ comercio, publicaciones = [] }: CommerceCardProps) {
   const photos = getPhotos(comercio);
   const telefono = comercio.telefono ?? comercio.whatsapp;
   const horario = 'horario' in comercio ? comercio.horario : undefined;
@@ -29,6 +36,15 @@ export function CommerceCard({ comercio }: CommerceCardProps) {
   const mapsUrl = buildMapsUrl(comercio);
   const telUrl = cleanPhone(telefono) ? `tel:${cleanPhone(telefono)}` : '#';
   const mainImage = getMainImage(comercio);
+  const latestPublicaciones = [...publicaciones].sort((a, b) => getDateValue(b.creadoEn) - getDateValue(a.creadoEn)).slice(0, 3);
+  const latestPublication = latestPublicaciones[0];
+  const publicationImages = latestPublicaciones
+    .map((publicacion) => ({
+      url: getPublicationMediaUrl(publicacion),
+      title: publicacion.titulo,
+      code: getPublicationCode(publicacion)
+    }))
+    .filter((item) => Boolean(item.url));
 
   return (
     <article className="h-full rounded-lg border border-slate-200 bg-white p-2 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-soft">
@@ -71,7 +87,13 @@ export function CommerceCard({ comercio }: CommerceCardProps) {
             <p className="truncate text-xs font-medium text-slate-600">{comercio.rubro}</p>
           </Link>
           <div className="mt-1 space-y-0.5">
-            <p className="truncate text-[11px] text-slate-500">{comercio.direccion ?? 'Ubicacion disponible por WhatsApp'}</p>
+            {latestPublication ? (
+              <p className="truncate text-[11px] font-semibold text-slate-700">
+                Ultimo: {latestPublication.titulo}{latestPublication.precio ? ` - ${formatPrice(latestPublication.precio)}` : ''}
+              </p>
+            ) : (
+              <p className="truncate text-[11px] text-slate-500">{comercio.direccion ?? 'Ubicacion disponible por WhatsApp'}</p>
+            )}
             {horario ? (
               <p className="flex min-w-0 items-center gap-1 truncate text-[11px] font-medium text-slate-600">
                 <Clock className="h-3 w-3 shrink-0 text-accent" />
@@ -80,6 +102,17 @@ export function CommerceCard({ comercio }: CommerceCardProps) {
             ) : null}
           </div>
         </div>
+
+        {publicationImages.length > 0 ? (
+          <Link href={`/comercios/${comercio.id}#publicaciones`} className="col-span-2 grid grid-cols-3 gap-1">
+            {publicationImages.map((item) => (
+              <span key={`${item.url}-${item.code}`} className="relative aspect-[5/3] overflow-hidden rounded-md bg-slate-100">
+                <img src={item.url} alt={item.title} className="h-full w-full object-cover" />
+                <span className="absolute bottom-1 left-1 rounded bg-white/95 px-1 text-[9px] font-black text-slate-700 shadow-sm">#{item.code}</span>
+              </span>
+            ))}
+          </Link>
+        ) : null}
 
         <div className="col-span-2 mt-1 grid grid-cols-4 gap-1.5">
           <a href={telUrl} className="inline-flex h-8 items-center justify-center gap-1 rounded-md bg-slate-100 px-2 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-200 active:scale-[0.98]" aria-label={`Llamar a ${comercio.nombre}`}>
