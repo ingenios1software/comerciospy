@@ -277,7 +277,6 @@ export async function POST(request: NextRequest) {
           fotos: [],
           servicios: [],
           horario,
-          ...subscriptionData,
           ubicacionUrl,
           ubicacion: {
             lat: 0,
@@ -417,13 +416,6 @@ export async function PATCH(request: NextRequest) {
           telefono,
           whatsapp,
           horario,
-          planNombre,
-          suscripcionEstado,
-          suscripcionInicio,
-          suscripcionVenceEn,
-          suscripcionVenceAt: getSubscriptionVenceAt(suscripcionVenceEn),
-          montoMensual: Number.isFinite(montoMensual) ? montoMensual : 0,
-          moneda,
           activo
         }
       : null;

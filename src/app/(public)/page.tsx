@@ -232,7 +232,7 @@ export default function Home() {
               <p className="text-[11px] font-semibold text-slate-500">Fotos, ofertas y articulos listos para consultar.</p>
             </div>
             <Link
-              href="/planes"
+              href="/login"
               className="rounded-md bg-slate-950 px-3 py-2 text-[11px] font-bold text-white shadow-sm transition hover:bg-slate-800"
             >
               Soy comercio

@@ -5,9 +5,9 @@ import { CalendarClock, CheckCircle2, Pencil, RefreshCw, ShieldCheck, UserPlus, 
 import { Sidebar } from '@/components/layout/sidebar';
 import { useAuth } from '@/lib/firebase/auth-context';
 import { categories } from '@/lib/categories';
-import { getAllComerciosForAdmin, getAllPlansForAdmin, getAllUsers, updateCommerce } from '@/lib/firebase/firestore';
+import { getAllComerciosForAdmin, getAllPlansForAdmin, getAllUsers, removeCommerceSubscriptionFields } from '@/lib/firebase/firestore';
 import { defaultPlans } from '@/lib/plans';
-import { daysUntilSubscription, getSubscriptionVenceAt, isSubscriptionExpired, isSubscriptionExpiringSoon } from '@/lib/subscription';
+import { daysUntilSubscription, isSubscriptionExpired, isSubscriptionExpiringSoon } from '@/lib/subscription';
 import type { Comercio, SubscriptionStatus, UserRole, UsuarioApp } from '@/types';
 
 const roleOptions: Array<{ value: UserRole; label: string }> = [
@@ -57,51 +57,32 @@ function formatAmount(value?: number, currency = 'PYG') {
   return `${new Intl.NumberFormat('es-PY').format(value)} ${currency}`;
 }
 
-function buildCommerceSubscriptionPayload(user: UsuarioApp): Partial<Comercio> {
-  return {
-    planNombre: user.planNombre ?? 'Basico',
-    suscripcionEstado: user.suscripcionEstado ?? 'active',
-    suscripcionInicio: user.suscripcionInicio ?? '',
-    suscripcionVenceEn: user.suscripcionVenceEn ?? '',
-    suscripcionVenceAt: getSubscriptionVenceAt(user.suscripcionVenceEn),
-    montoMensual: user.montoMensual ?? 0,
-    moneda: user.moneda ?? 'PYG'
-  };
+const commerceSubscriptionKeys = [
+  'planNombre',
+  'suscripcionEstado',
+  'suscripcionInicio',
+  'suscripcionVenceEn',
+  'suscripcionVenceAt',
+  'montoMensual',
+  'moneda'
+] as const;
+
+function hasCommerceSubscriptionFields(comercio: Comercio) {
+  return commerceSubscriptionKeys.some((key) => comercio[key] !== undefined);
 }
 
-function needsSubscriptionSync(comercio: Comercio, payload: Partial<Comercio>) {
-  return (
-    comercio.planNombre !== payload.planNombre ||
-    comercio.suscripcionEstado !== payload.suscripcionEstado ||
-    comercio.suscripcionInicio !== payload.suscripcionInicio ||
-    comercio.suscripcionVenceEn !== payload.suscripcionVenceEn ||
-    comercio.montoMensual !== payload.montoMensual ||
-    comercio.moneda !== payload.moneda
-  );
+function stripCommerceSubscriptionFields(comercio: Comercio): Comercio {
+  return Object.fromEntries(Object.entries(comercio).filter(([key]) => !commerceSubscriptionKeys.includes(key as (typeof commerceSubscriptionKeys)[number]))) as Comercio;
 }
 
-async function syncCommerceSubscriptions(users: UsuarioApp[], comercios: Comercio[]) {
-  const commerceById = new Map(comercios.map((comercio) => [comercio.id, comercio]));
-  const updates = users
-    .filter((user) => user.rol === 'comercio')
-    .map((user) => {
-      const comercioId = user.comercioId ?? user.id;
-      const comercio = commerceById.get(comercioId);
-      if (!comercio) return null;
-
-      const payload = buildCommerceSubscriptionPayload(user);
-      if (!needsSubscriptionSync(comercio, payload)) return null;
-
-      commerceById.set(comercioId, { ...comercio, ...payload });
-      return updateCommerce(comercioId, payload);
-    })
-    .filter((update): update is Promise<void> => update !== null);
+async function cleanupCommerceSubscriptionFields(comercios: Comercio[]) {
+  const updates = comercios.filter(hasCommerceSubscriptionFields).map((comercio) => removeCommerceSubscriptionFields(comercio.id));
 
   if (updates.length > 0) {
     await Promise.allSettled(updates);
   }
 
-  return Array.from(commerceById.values());
+  return comercios.map(stripCommerceSubscriptionFields);
 }
 
 export default function AdminUsuariosPage() {
@@ -157,9 +138,9 @@ export default function AdminUsuariosPage() {
 
     try {
       const [usersData, comerciosData, plansData] = await Promise.all([getAllUsers(), getAllComerciosForAdmin(), getAllPlansForAdmin()]);
-      const syncedComercios = await syncCommerceSubscriptions(usersData, comerciosData);
+      const cleanComercios = await cleanupCommerceSubscriptionFields(comerciosData);
       setUsers(usersData);
-      setComercios(syncedComercios);
+      setComercios(cleanComercios);
       setPlanOptions(plansData.map((plan) => ({ value: plan.nombre, label: plan.nombre })));
     } catch {
       setUsersError('No se pudo cargar el listado de usuarios.');

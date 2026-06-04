@@ -1,4 +1,4 @@
-import { collection, doc, getDoc, getDocs, getFirestore, query, setDoc, where } from 'firebase/firestore';
+import { collection, deleteField, doc, getDoc, getDocs, getFirestore, query, setDoc, updateDoc, where } from 'firebase/firestore';
 import { getFirebaseApp } from './firebase';
 import { isCommercePubliclyVisible } from '@/lib/subscription';
 import { defaultPlans, sortPlans } from '@/lib/plans';
@@ -104,6 +104,18 @@ export async function createCommerce(comercio: Comercio) {
 
 export async function updateCommerce(id: string, comercio: Partial<Comercio>) {
   return setDoc(comerciosCollection(id), comercio, { merge: true });
+}
+
+export async function removeCommerceSubscriptionFields(id: string) {
+  return updateDoc(comerciosCollection(id), {
+    planNombre: deleteField(),
+    suscripcionEstado: deleteField(),
+    suscripcionInicio: deleteField(),
+    suscripcionVenceEn: deleteField(),
+    suscripcionVenceAt: deleteField(),
+    montoMensual: deleteField(),
+    moneda: deleteField()
+  });
 }
 
 export async function getCommerceByOwner(ownerId: string): Promise<Comercio | null> {
