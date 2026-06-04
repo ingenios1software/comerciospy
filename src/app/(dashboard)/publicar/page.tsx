@@ -539,7 +539,7 @@ export default function PublicarPage() {
         imagenUrl: mediaKind === 'image' ? mediaUrl : '',
         mediaUrl,
         mediaType: mediaKind ?? 'image',
-        duracionSegundos: mediaKind === 'video' && videoDuration ? Math.round(videoDuration) : undefined,
+        ...(mediaKind === 'video' && videoDuration ? { duracionSegundos: Math.round(videoDuration) } : {}),
         moderacionEstado: moderation.status,
         categoria,
         ciudad: comercio?.ciudad ?? 'Ciudad',
