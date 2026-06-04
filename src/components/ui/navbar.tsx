@@ -5,8 +5,6 @@ import { FormEvent, useState } from 'react';
 import { LogOut, MessageCircle, Search, ShoppingCart } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/firebase/auth-context';
-import { adminContactMessage, adminWhatsapp } from '@/lib/admin-contact';
-import { buildWhatsappUrl } from '@/lib/utils/format';
 import { ShareAppButton } from './share-app-button';
 import { developerBrand } from '@/lib/brand';
 
@@ -42,7 +40,7 @@ export function Navbar() {
         { label: 'Buscar gratis', href: '/comercios' },
         { label: 'Favoritos', href: '/favoritos' },
         { label: 'Carrito', href: '/carrito' },
-        { label: 'Panel comercio', href: '/login' }
+        { label: 'Planes', href: '/planes' }
       ];
   const isActive = (href: string) => (href === '/' ? pathname === '/' : pathname.startsWith(href));
 
@@ -91,15 +89,13 @@ export function Navbar() {
             ) : (
               <>
                 <ShareAppButton />
-                <a
-                  href={buildWhatsappUrl(adminWhatsapp, adminContactMessage)}
-                  target="_blank"
-                  rel="noreferrer"
+                <Link
+                  href="/planes"
                   className="inline-flex h-8 items-center gap-1 rounded-md bg-white px-2.5 text-[11px] font-bold text-accent transition hover:bg-red-50"
                 >
                   <MessageCircle className="h-3.5 w-3.5" />
                   Quiero aparecer
-                </a>
+                </Link>
                 <Link href="/carrito" className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-white/15 text-white transition hover:bg-white/25" aria-label="Abrir carrito">
                   <ShoppingCart className="h-3.5 w-3.5" />
                 </Link>

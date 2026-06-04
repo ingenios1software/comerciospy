@@ -1,7 +1,7 @@
 "use client";
 
 import Link from 'next/link';
-import { LayoutDashboard, LogOut, Map, PlusCircle, Store, User, Users } from 'lucide-react';
+import { CreditCard, LayoutDashboard, LogOut, Map, PlusCircle, Store, User, Users } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/firebase/auth-context';
 
@@ -12,7 +12,10 @@ const sidebarItems = [
   { label: 'Mapa', href: '/mapa', icon: Map }
 ];
 
-const adminSidebarItems = [{ label: 'Usuarios', href: '/admin/usuarios', icon: Users }];
+const adminSidebarItems = [
+  { label: 'Usuarios', href: '/admin/usuarios', icon: Users },
+  { label: 'Planes', href: '/admin/planes', icon: CreditCard }
+];
 
 export function Sidebar() {
   const { user, profile, loading, logout } = useAuth();

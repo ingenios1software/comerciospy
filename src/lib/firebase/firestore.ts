@@ -1,7 +1,8 @@
 import { collection, doc, getDoc, getDocs, getFirestore, query, setDoc, where } from 'firebase/firestore';
 import { getFirebaseApp } from './firebase';
 import { isCommercePubliclyVisible } from '@/lib/subscription';
-import type { Categoria, Comercio, Publicacion, UsuarioApp } from '@/types';
+import { defaultPlans, sortPlans } from '@/lib/plans';
+import type { Categoria, Comercio, PlanComercial, Publicacion, UsuarioApp } from '@/types';
 
 function getFirestoreInstance() {
   return getFirestore(getFirebaseApp());
@@ -11,14 +12,17 @@ const usersCollection = (id: string) => doc(getFirestoreInstance(), 'users', id)
 const publicacionesCollection = (id: string) => doc(getFirestoreInstance(), 'publicaciones', id);
 const comerciosCollection = (id: string) => doc(getFirestoreInstance(), 'comercios', id);
 const categoriasCollection = (id: string) => doc(getFirestoreInstance(), 'categorias', id);
+const planesCollection = (id: string) => doc(getFirestoreInstance(), 'planes', id);
 const usersCollectionRef = () => collection(getFirestoreInstance(), 'users');
 const comerciosCollectionRef = () => collection(getFirestoreInstance(), 'comercios');
 const publicacionesCollectionRef = () => collection(getFirestoreInstance(), 'publicaciones');
 const categoriasCollectionRef = () => collection(getFirestoreInstance(), 'categorias');
+const planesCollectionRef = () => collection(getFirestoreInstance(), 'planes');
 
 const activeComerciosQuery = () => query(comerciosCollectionRef(), where('activo', '==', true));
 const activePublicacionesQuery = () => query(publicacionesCollectionRef(), where('activo', '==', true));
 const activeCategoriasQuery = () => query(categoriasCollectionRef(), where('activo', '==', true));
+const activePlanesQuery = () => query(planesCollectionRef(), where('activo', '==', true));
 
 export async function createUserProfile(user: UsuarioApp) {
   return setDoc(usersCollection(user.id), user);
@@ -129,4 +133,20 @@ export async function getCategoryById(id: string): Promise<Categoria | null> {
 
 export async function seedCategories(categorias: Categoria[]) {
   return Promise.all(categorias.map((categoria) => setDoc(categoriasCollection(categoria.id), categoria)));
+}
+
+export async function getActivePlans(): Promise<PlanComercial[]> {
+  const querySnapshot = await getDocs(activePlanesQuery());
+  const plans = querySnapshot.docs.map((docItem) => docItem.data() as PlanComercial);
+  return plans.length > 0 ? sortPlans(plans) : defaultPlans;
+}
+
+export async function getAllPlansForAdmin(): Promise<PlanComercial[]> {
+  const querySnapshot = await getDocs(planesCollectionRef());
+  const plans = querySnapshot.docs.map((docItem) => docItem.data() as PlanComercial);
+  return plans.length > 0 ? sortPlans(plans) : defaultPlans;
+}
+
+export async function upsertPlan(plan: PlanComercial) {
+  return setDoc(planesCollection(plan.id), plan, { merge: true });
 }

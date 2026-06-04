@@ -129,9 +129,9 @@ export default function LoginPage() {
             <h2 className="text-3xl font-semibold leading-tight">Para unirte, primero contactas con administracion.</h2>
             <p className="text-sm leading-6 text-slate-600">Despues del pago se crea tu ficha, se asigna tu usuario y queda listo el panel para que cargues fotos, servicios y publicaciones.</p>
           </div>
-          <Link href="/registro" className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white shadow-soft transition hover:bg-emerald-700">
+          <Link href="/planes" className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white shadow-soft transition hover:bg-emerald-700">
             <MessageCircle className="h-4 w-4" />
-            Solicitar alta
+            Ver planes
           </Link>
         </aside>
       </div>

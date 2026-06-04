@@ -1,7 +1,7 @@
 "use client";
 
 import Link from 'next/link';
-import { Heart, Home, List, LogOut, PlusCircle, ShoppingCart, Store, User, Users } from 'lucide-react';
+import { CreditCard, Heart, Home, List, LogOut, PlusCircle, ShoppingCart, Store, User, Users } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/firebase/auth-context';
 
@@ -32,7 +32,7 @@ export function BottomNavigation() {
     ? [
         { label: 'Inicio', href: '/', icon: Home },
         { label: 'Guia', href: '/comercios', icon: List },
-        { label: 'Favoritos', href: '/favoritos', icon: Heart },
+        { label: 'Planes', href: '/admin/planes', icon: CreditCard },
         { label: 'Usuarios', href: '/admin/usuarios', icon: Users },
         { label: 'Panel', href: '/dashboard', icon: User }
       ]
@@ -49,7 +49,7 @@ export function BottomNavigation() {
         { label: 'Buscar', href: '/comercios', icon: List },
         { label: 'Favoritos', href: '/favoritos', icon: Heart },
         { label: 'Carrito', href: '/carrito', icon: ShoppingCart },
-        { label: 'Comercio', href: '/login', icon: Store }
+        { label: 'Planes', href: '/planes', icon: Store }
       ];
   const showLogout = !loading && Boolean(user);
   const isActive = (href: string) => (href === '/' ? pathname === '/' : pathname.startsWith(href));

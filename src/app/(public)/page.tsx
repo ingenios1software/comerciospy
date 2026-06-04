@@ -16,13 +16,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { CommerceCard } from '@/components/comercios/commerce-card';
 import { PublicacionCard } from '@/components/publicaciones/publicacion-card';
 import { FilterSelect } from '@/components/ui/filter-select';
-import { adminContactMessage, adminWhatsapp } from '@/lib/admin-contact';
 import { categoryGroups, categoryMatchesGroup, getCategoriesForGroup, getCategoryGroupForCategory } from '@/lib/categories';
 import { cityMatches, getCityOptions } from '@/lib/cities';
 import { getAllComercios, getAllPublications } from '@/lib/firebase/firestore';
 import { sampleComercios, samplePublicaciones } from '@/lib/mockData';
 import { matchesCommerceSearch } from '@/lib/search';
-import { buildWhatsappUrl } from '@/lib/utils/format';
 import type { Comercio, Publicacion } from '@/types';
 
 export default function Home() {
@@ -35,7 +33,6 @@ export default function Home() {
   const [selectedCity, setSelectedCity] = useState('Todas');
   const [loadingComercios, setLoadingComercios] = useState(true);
   const [loadingPublicaciones, setLoadingPublicaciones] = useState(true);
-  const adminWhatsappUrl = useMemo(() => buildWhatsappUrl(adminWhatsapp, adminContactMessage), []);
 
   useEffect(() => {
     const loadData = async () => {
@@ -117,9 +114,8 @@ export default function Home() {
     },
     {
       label: 'Vender',
-      href: adminWhatsappUrl,
+      href: '/planes',
       Icon: BriefcaseBusiness,
-      external: true
     }
   ];
 
@@ -235,14 +231,12 @@ export default function Home() {
               <h2 className="text-[17px] font-black text-slate-950">Recien publicado</h2>
               <p className="text-[11px] font-semibold text-slate-500">Fotos, ofertas y articulos listos para consultar.</p>
             </div>
-            <a
-              href={adminWhatsappUrl}
-              target="_blank"
-              rel="noreferrer"
+            <Link
+              href="/planes"
               className="rounded-md bg-slate-950 px-3 py-2 text-[11px] font-bold text-white shadow-sm transition hover:bg-slate-800"
             >
               Soy comercio
-            </a>
+            </Link>
           </div>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
             {loadingPublicaciones ? (
@@ -269,17 +263,7 @@ export default function Home() {
               </>
             );
 
-            return action.external ? (
-              <a
-                key={action.label}
-                href={action.href}
-                target="_blank"
-                rel="noreferrer"
-                className="flex h-11 min-w-0 items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2 shadow-sm transition hover:border-red-200 hover:bg-red-50/30"
-              >
-                {content}
-              </a>
-            ) : (
+            return (
               <Link
                 key={action.label}
                 href={action.href}

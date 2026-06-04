@@ -25,6 +25,21 @@ export type Categoria = {
   creadoEn: string;
 };
 
+export type PlanComercial = {
+  id: string;
+  nombre: string;
+  descripcion?: string;
+  precio: number;
+  moneda: string;
+  duracionDias: number;
+  etiqueta?: string;
+  destacado?: boolean;
+  activo: boolean;
+  orden: number;
+  creadoEn?: string;
+  actualizadoEn?: string;
+};
+
 export type CommercePreview = {
   id: string;
   nombre: string;

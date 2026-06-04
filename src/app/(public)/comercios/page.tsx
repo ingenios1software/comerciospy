@@ -7,13 +7,11 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { CommerceCard } from '@/components/comercios/commerce-card';
 import { FilterSelect } from '@/components/ui/filter-select';
 import { SearchBar } from '@/components/ui/search-bar';
-import { adminContactMessage, adminWhatsapp } from '@/lib/admin-contact';
 import { categoryGroups, categoryMatchesGroup, getCategoriesForGroup, getCategoryGroupForCategory } from '@/lib/categories';
 import { cityMatches, getCityOptions } from '@/lib/cities';
 import { getAllComercios, getAllPublications } from '@/lib/firebase/firestore';
 import { sampleComercios, samplePublicaciones } from '@/lib/mockData';
 import { matchesCommerceSearch } from '@/lib/search';
-import { buildWhatsappUrl } from '@/lib/utils/format';
 import type { Comercio, Publicacion } from '@/types';
 
 export default function ComerciosPage() {
@@ -125,15 +123,13 @@ export default function ComerciosPage() {
               <h1 className="mt-1 text-2xl font-semibold sm:text-3xl">Comercios y servicios</h1>
               <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-600 sm:text-sm">Busca, compara y entra a la ficha del comercio para ver fotos, publicaciones, ubicacion y contacto.</p>
             </div>
-            <a
-              href={buildWhatsappUrl(adminWhatsapp, adminContactMessage)}
-              target="_blank"
-              rel="noreferrer"
+            <Link
+              href="/planes"
               className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-md bg-emerald-600 px-3 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-700"
             >
               <MessageCircle className="h-4 w-4" />
               Quiero aparecer
-            </a>
+            </Link>
           </div>
         </section>
 

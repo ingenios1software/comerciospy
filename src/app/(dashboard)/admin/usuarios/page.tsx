@@ -5,7 +5,8 @@ import { CalendarClock, CheckCircle2, Pencil, RefreshCw, ShieldCheck, UserPlus, 
 import { Sidebar } from '@/components/layout/sidebar';
 import { useAuth } from '@/lib/firebase/auth-context';
 import { categories } from '@/lib/categories';
-import { getAllComerciosForAdmin, getAllUsers, updateCommerce } from '@/lib/firebase/firestore';
+import { getAllComerciosForAdmin, getAllPlansForAdmin, getAllUsers, updateCommerce } from '@/lib/firebase/firestore';
+import { defaultPlans } from '@/lib/plans';
 import { daysUntilSubscription, getSubscriptionVenceAt, isSubscriptionExpired, isSubscriptionExpiringSoon } from '@/lib/subscription';
 import type { Comercio, SubscriptionStatus, UserRole, UsuarioApp } from '@/types';
 
@@ -24,7 +25,7 @@ const subscriptionStatusOptions: Array<{ value: SubscriptionStatus; label: strin
   { value: 'cancelled', label: 'Cancelada' }
 ];
 
-const planOptions = [
+const fallbackPlanOptions = [
   { value: 'Basico', label: 'Basico' },
   { value: 'Pro', label: 'Pro' },
   { value: 'Premium', label: 'Premium' }
@@ -106,6 +107,8 @@ async function syncCommerceSubscriptions(users: UsuarioApp[], comercios: Comerci
 export default function AdminUsuariosPage() {
   const { user, profile, loading } = useAuth();
   const categoryOptions = useMemo(() => categories.filter((category) => category.id !== 'Todos'), []);
+  const defaultPlanOptions = useMemo(() => defaultPlans.map((plan) => ({ value: plan.nombre, label: plan.nombre })), []);
+  const [planOptions, setPlanOptions] = useState(defaultPlanOptions.length > 0 ? defaultPlanOptions : fallbackPlanOptions);
   const [rol, setRol] = useState<UserRole>('comercio');
   const [nombre, setNombre] = useState('');
   const [email, setEmail] = useState('');
@@ -153,10 +156,11 @@ export default function AdminUsuariosPage() {
     setUsersError(null);
 
     try {
-      const [usersData, comerciosData] = await Promise.all([getAllUsers(), getAllComerciosForAdmin()]);
+      const [usersData, comerciosData, plansData] = await Promise.all([getAllUsers(), getAllComerciosForAdmin(), getAllPlansForAdmin()]);
       const syncedComercios = await syncCommerceSubscriptions(usersData, comerciosData);
       setUsers(usersData);
       setComercios(syncedComercios);
+      setPlanOptions(plansData.map((plan) => ({ value: plan.nombre, label: plan.nombre })));
     } catch {
       setUsersError('No se pudo cargar el listado de usuarios.');
     } finally {

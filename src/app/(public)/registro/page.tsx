@@ -2,8 +2,7 @@
 
 import Link from 'next/link';
 import { CheckCircle2, MessageCircle, ShieldCheck } from 'lucide-react';
-import { adminContactMessage, adminWhatsapp } from '@/lib/admin-contact';
-import { buildWhatsappUrl } from '@/lib/utils/format';
+import { adminWhatsapp } from '@/lib/admin-contact';
 
 const steps = [
   'Te escriben por WhatsApp con los datos del negocio.',
@@ -12,8 +11,6 @@ const steps = [
 ];
 
 export default function RegistroPage() {
-  const whatsappUrl = buildWhatsappUrl(adminWhatsapp, adminContactMessage);
-
   return (
     <main className="min-h-screen bg-surface px-4 pb-28 pt-24 text-slate-950 sm:px-6">
       <div className="mx-auto grid max-w-5xl gap-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-start">
@@ -29,15 +26,13 @@ export default function RegistroPage() {
           </div>
 
           <div className="flex flex-col gap-3 sm:flex-row">
-            <a
-              href={whatsappUrl}
-              target="_blank"
-              rel="noreferrer"
+            <Link
+              href="/planes"
               className="inline-flex items-center justify-center gap-2 rounded-2xl bg-accent px-5 py-3 text-sm font-semibold text-white shadow-soft transition hover:bg-red-700"
             >
               <MessageCircle className="h-4 w-4" />
-              Quiero aparecer
-            </a>
+              Ver planes
+            </Link>
             <Link
               href="/comercios"
               className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-800 shadow-soft transition hover:border-slate-300"
