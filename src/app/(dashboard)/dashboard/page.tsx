@@ -7,7 +7,7 @@ import { Sidebar } from '@/components/layout/sidebar';
 import { DigitalBusinessCard } from '@/components/comercios/digital-business-card';
 import { RenewalNotice } from '@/components/subscription/renewal-notice';
 import { useAuth } from '@/lib/firebase/auth-context';
-import { getComercioById, getPublicationsByCommerce } from '@/lib/firebase/firestore';
+import { getComercioById, getPublicationsByCommerce, markPublicationAsSold } from '@/lib/firebase/firestore';
 import { samplePublicaciones } from '@/lib/mockData';
 import { isSubscriptionExpired } from '@/lib/subscription';
 import { PublicacionCard } from '@/components/publicaciones/publicacion-card';
@@ -17,6 +17,8 @@ export default function DashboardPage() {
   const { user, profile, loading } = useAuth();
   const [comercio, setComercio] = useState<Comercio | null>(null);
   const [publicaciones, setPublicaciones] = useState<Publicacion[]>([]);
+  const [markingSoldId, setMarkingSoldId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState('');
   const subscriptionExpired = profile?.rol === 'comercio' && isSubscriptionExpired(profile);
 
   useEffect(() => {
@@ -40,6 +42,20 @@ export default function DashboardPage() {
 
     loadData();
   }, [profile?.comercioId]);
+
+  const handleMarkSold = async (publicacion: Publicacion) => {
+    setActionError('');
+    setMarkingSoldId(publicacion.id);
+
+    try {
+      await markPublicationAsSold(publicacion.id);
+      setPublicaciones((current) => current.filter((item) => item.id !== publicacion.id));
+    } catch {
+      setActionError('No se pudo marcar como vendido. Proba otra vez.');
+    } finally {
+      setMarkingSoldId(null);
+    }
+  };
 
   if (loading) {
     return (
@@ -151,9 +167,20 @@ export default function DashboardPage() {
                   </Link>
                 ) : null}
               </div>
+              {actionError ? (
+                <p className="rounded-2xl border border-red-100 bg-red-50 p-3 text-sm font-semibold text-accent">{actionError}</p>
+              ) : null}
               <div className="grid gap-3 lg:grid-cols-3">
                 {publicaciones.length > 0 ? (
-                  publicaciones.map((publicacion) => <PublicacionCard key={publicacion.id} publicacion={publicacion} comercio={comercio} />)
+                  publicaciones.map((publicacion) => (
+                    <PublicacionCard
+                      key={publicacion.id}
+                      publicacion={publicacion}
+                      comercio={comercio}
+                      onMarkSold={handleMarkSold}
+                      markingSold={markingSoldId === publicacion.id}
+                    />
+                  ))
                 ) : (
                   <p className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-500 shadow-soft">Todavia no hay publicaciones.</p>
                 )}

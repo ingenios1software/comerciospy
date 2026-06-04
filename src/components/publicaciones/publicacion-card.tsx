@@ -1,6 +1,6 @@
 "use client";
 
-import { BadgePercent, MessageCircle } from 'lucide-react';
+import { BadgePercent, CheckCircle2, MessageCircle } from 'lucide-react';
 import { useState } from 'react';
 import { FavoriteButton } from '@/components/favorites/favorite-button';
 import { ImageLightbox, type LightboxImage } from '@/components/ui/image-lightbox';
@@ -10,9 +10,11 @@ import { buildWhatsappUrl, formatPrice } from '@/lib/utils/format';
 type PublicacionCardProps = {
   publicacion: Publicacion;
   comercio?: Pick<Comercio, 'id' | 'nombre' | 'whatsapp' | 'telefono'> | null;
+  onMarkSold?: (publicacion: Publicacion) => void | Promise<void>;
+  markingSold?: boolean;
 };
 
-export function PublicacionCard({ publicacion, comercio }: PublicacionCardProps) {
+export function PublicacionCard({ publicacion, comercio, onMarkSold, markingSold = false }: PublicacionCardProps) {
   const [activeImageIndex, setActiveImageIndex] = useState<number | null>(null);
   const mediaUrl = publicacion.mediaUrl || publicacion.imagenUrl;
   const isVideo = publicacion.mediaType === 'video' && Boolean(mediaUrl);
@@ -89,6 +91,17 @@ export function PublicacionCard({ publicacion, comercio }: PublicacionCardProps)
             <span className="font-semibold text-slate-900">{formatPrice(publicacion.precio)}</span>
             <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">{publicacion.categoria}</span>
           </div>
+          {onMarkSold ? (
+            <button
+              type="button"
+              onClick={() => onMarkSold(publicacion)}
+              disabled={markingSold}
+              className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-md bg-slate-950 px-3 text-xs font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+            >
+              <CheckCircle2 className="h-4 w-4" />
+              {markingSold ? 'Marcando...' : 'Vendido'}
+            </button>
+          ) : null}
         </div>
       </article>
       <ImageLightbox images={imageItems} activeIndex={activeImageIndex} onChange={setActiveImageIndex} onClose={() => setActiveImageIndex(null)} />

@@ -86,6 +86,8 @@ export type Publicacion = {
   mediaType?: 'image' | 'video';
   duracionSegundos?: number;
   moderacionEstado?: 'approved' | 'pending' | 'rejected';
+  estado?: 'disponible' | 'vendido';
+  vendidoEn?: string;
   categoria: string;
   ciudad: string;
   activo: boolean;

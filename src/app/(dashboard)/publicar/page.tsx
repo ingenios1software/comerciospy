@@ -541,6 +541,7 @@ export default function PublicarPage() {
         mediaType: mediaKind ?? 'image',
         ...(mediaKind === 'video' && videoDuration ? { duracionSegundos: Math.round(videoDuration) } : {}),
         moderacionEstado: moderation.status,
+        estado: 'disponible',
         categoria,
         ciudad: comercio?.ciudad ?? 'Ciudad',
         activo: true,

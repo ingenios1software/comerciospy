@@ -38,6 +38,18 @@ export async function createPublication(publicacion: Publicacion) {
   return setDoc(publicacionesCollection(publicacion.id), publicacion);
 }
 
+export async function updatePublication(id: string, publicacion: Partial<Publicacion>) {
+  return setDoc(publicacionesCollection(id), publicacion, { merge: true });
+}
+
+export async function markPublicationAsSold(id: string) {
+  return updatePublication(id, {
+    activo: false,
+    estado: 'vendido',
+    vendidoEn: new Date().toISOString()
+  });
+}
+
 export async function getLatestPublications(limit = 10): Promise<Publicacion[]> {
   const [querySnapshot, comercios] = await Promise.all([getDocs(activePublicacionesQuery()), getAllComercios()]);
   const visibleCommerceIds = new Set(comercios.map((comercio) => comercio.id));
