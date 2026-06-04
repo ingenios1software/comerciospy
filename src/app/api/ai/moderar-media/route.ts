@@ -47,7 +47,7 @@ function getFlaggedCategories(response: ModerationResponse) {
 }
 
 function getModerationError(status: number, message?: string) {
-  if (status === 401) return 'La API key de OpenAI no es valida o fue revocada.';
+  if (status === 401) return 'La revision IA no esta disponible por configuracion del servidor.';
   if (status === 429) return 'OpenAI esta limitando las revisiones. Intenta de nuevo en unos minutos.';
   return message || 'No pudimos revisar el contenido con IA.';
 }
@@ -56,7 +56,7 @@ export async function POST(request: Request) {
   const apiKey = process.env.OPENAI_API_KEY;
 
   if (!apiKey) {
-    return NextResponse.json({ error: 'Falta configurar OPENAI_API_KEY en el servidor.' }, { status: 503 });
+    return NextResponse.json({ error: 'La revision IA no esta disponible por configuracion del servidor.' }, { status: 503 });
   }
 
   const body = (await request.json().catch(() => null)) as { text?: unknown; frames?: unknown } | null;

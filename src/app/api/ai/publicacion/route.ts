@@ -148,7 +148,7 @@ function getOpenAiErrorMessage(status: number, error?: OpenAiResponse['error']) 
   }
 
   if (status === 401) {
-    return 'La API key de OpenAI no es valida o fue revocada. Revisa OPENAI_API_KEY en Vercel.';
+    return 'La IA no esta disponible por configuracion del servidor. Podes completar el texto manualmente y publicar igual.';
   }
 
   return message || 'No se pudo generar la sugerencia con IA.';
@@ -166,7 +166,10 @@ export async function POST(request: Request) {
   const apiKey = process.env.OPENAI_API_KEY;
 
   if (!apiKey) {
-    return NextResponse.json({ error: 'Falta configurar OPENAI_API_KEY en el servidor.' }, { status: 503 });
+    return NextResponse.json(
+      { error: 'La IA no esta disponible por configuracion del servidor. Podes completar el texto manualmente y publicar igual.' },
+      { status: 503 }
+    );
   }
 
   const formData = await request.formData();

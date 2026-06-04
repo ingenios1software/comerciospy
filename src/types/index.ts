@@ -84,7 +84,7 @@ export type Publicacion = {
   mediaUrl?: string;
   mediaType?: 'image' | 'video';
   duracionSegundos?: number;
-  moderacionEstado?: 'approved' | 'rejected';
+  moderacionEstado?: 'approved' | 'pending' | 'rejected';
   categoria: string;
   ciudad: string;
   activo: boolean;

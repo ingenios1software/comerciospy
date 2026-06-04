@@ -25,6 +25,10 @@ type ModerationResponse = {
   error?: string;
 };
 
+type ModerationResult = {
+  status: NonNullable<Publicacion['moderacionEstado']>;
+};
+
 const supportedPublicationImageTypes = ['image/jpeg', 'image/png', 'image/webp'];
 const supportedPublicationImageExtensions = ['.jpg', '.jpeg', '.png', '.webp'];
 const supportedPublicationVideoTypes = ['video/mp4', 'video/webm', 'video/quicktime'];
@@ -34,6 +38,7 @@ const maxPublicationVideoBytes = 25 * 1024 * 1024;
 const maxPublicationVideoSeconds = 20;
 const maxPublicationImageDimension = 1600;
 const publicationImageQuality = 0.86;
+const skippableModerationStatuses = [401, 429, 503];
 
 function getFileExtension(fileName: string) {
   const match = fileName.toLowerCase().match(/\.[^.]+$/);
@@ -286,7 +291,7 @@ async function moderatePublicationMedia({
   descripcion: string;
   categoria: string;
   tipo: Publicacion['tipo'];
-}) {
+}): Promise<ModerationResult> {
   const frames = mediaKind === 'video' ? await extractVideoFrames(file) : [await fileToDataUrl(file)];
   const text = [`Titulo: ${titulo}`, `Descripcion: ${descripcion}`, `Categoria: ${categoria}`, `Tipo: ${tipo}`].join('\n');
 
@@ -300,6 +305,11 @@ async function moderatePublicationMedia({
   const data = (await response.json().catch(() => null)) as ModerationResponse | null;
 
   if (!response.ok) {
+    if (skippableModerationStatuses.includes(response.status)) {
+      console.warn('Moderacion IA no disponible, se publica pendiente de revision.', data?.error ?? response.statusText);
+      return { status: 'pending' };
+    }
+
     throw new Error(data?.error ?? 'No pudimos revisar el contenido con IA.');
   }
 
@@ -307,6 +317,8 @@ async function moderatePublicationMedia({
     const categories = data?.flaggedCategories?.length ? ` (${data.flaggedCategories.join(', ')})` : '';
     throw new Error(`No podemos publicar este contenido porque la revision IA detecto material no permitido${categories}.`);
   }
+
+  return { status: 'approved' };
 }
 
 function getFirebasePublishMessage(error: unknown) {
@@ -334,6 +346,21 @@ function getFirebasePublishMessage(error: unknown) {
   }
 
   return 'No se pudo publicar. Revisa tu conexion o la configuracion de Firebase.';
+}
+
+function getAiAnalysisMessage(error: unknown) {
+  const message = error instanceof Error ? error.message : '';
+  const searchable = message.toLowerCase();
+
+  if (searchable.includes('api key') || searchable.includes('openai_api_key') || searchable.includes('vercel')) {
+    return 'La IA no esta disponible por configuracion del servidor. Podes completar el texto manualmente y publicar igual.';
+  }
+
+  if (searchable.includes('creditos') || searchable.includes('billing') || searchable.includes('limite mensual')) {
+    return 'La IA no esta disponible por limite de uso de OpenAI. Podes completar el texto manualmente y publicar igual.';
+  }
+
+  return message || 'No se pudo analizar la foto.';
 }
 
 export default function PublicarPage() {
@@ -424,7 +451,7 @@ export default function PublicarPage() {
       setCategoria(data.suggestion.categoria);
       setTipo(data.suggestion.tipo);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo analizar la foto.');
+      setError(getAiAnalysisMessage(err));
     } finally {
       setAnalyzing(false);
     }
@@ -487,16 +514,16 @@ export default function PublicarPage() {
     try {
       const id = crypto.randomUUID();
       setReviewingMedia(true);
-      if (mediaFile && mediaKind) {
-        await moderatePublicationMedia({
+      const moderation = mediaFile && mediaKind
+        ? await moderatePublicationMedia({
           file: mediaFile,
           mediaKind,
           titulo,
           descripcion,
           categoria,
           tipo
-        });
-      }
+        })
+        : { status: 'approved' as const };
       setReviewingMedia(false);
 
       const mediaUrl = mediaFile ? await uploadFile(`publicaciones/${user.uid}/${id}`, mediaFile) : '';
@@ -513,7 +540,7 @@ export default function PublicarPage() {
         mediaUrl,
         mediaType: mediaKind ?? 'image',
         duracionSegundos: mediaKind === 'video' && videoDuration ? Math.round(videoDuration) : undefined,
-        moderacionEstado: 'approved',
+        moderacionEstado: moderation.status,
         categoria,
         ciudad: comercio?.ciudad ?? 'Ciudad',
         activo: true,
@@ -603,7 +630,7 @@ export default function PublicarPage() {
                 <input
                   id="imagen"
                   type="file"
-                  accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime"
+                  accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime,.jpg,.jpeg,.png,.webp,.mp4,.webm,.mov"
                   onChange={handleMediaChange}
                   className="sr-only"
                 />

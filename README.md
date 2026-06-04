@@ -82,7 +82,7 @@ OPENAI_MODEL=gpt-5-mini
 Notas:
 
 - Las variables `NEXT_PUBLIC_*` se incluyen en el bundle del navegador durante `next build`; deben estar configuradas antes del deploy.
-- `OPENAI_API_KEY` queda solo del lado servidor y se usa en `POST /api/ai/publicacion`.
+- `OPENAI_API_KEY` queda solo del lado servidor y se usa en `POST /api/ai/publicacion` y `POST /api/ai/moderar-media`.
 - `NEXT_PUBLIC_APP_URL` mejora los enlaces compartidos de las fichas digitales. Si todavia no hay dominio final, puede completarse despues y redeployar.
 
 ## Firebase

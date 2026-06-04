@@ -1,13 +1,29 @@
 "use client";
 
 import Link from 'next/link';
-import { MessageCircle, Search, Sparkles } from 'lucide-react';
+import {
+  ArrowRight,
+  BadgePercent,
+  BriefcaseBusiness,
+  Building2,
+  Car,
+  CircuitBoard,
+  Home as HomeIcon,
+  MapPin,
+  MessageCircle,
+  PlugZap,
+  Search,
+  Shirt,
+  Smartphone,
+  Store,
+  Utensils,
+  Wrench
+} from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { CommerceCard } from '@/components/comercios/commerce-card';
 import { PublicacionCard } from '@/components/publicaciones/publicacion-card';
 import { FilterSelect } from '@/components/ui/filter-select';
-import { SearchBar } from '@/components/ui/search-bar';
 import { ShareAppButton } from '@/components/ui/share-app-button';
 import { adminContactMessage, adminWhatsapp } from '@/lib/admin-contact';
 import { categoryGroups, categoryMatchesGroup, getCategoriesForGroup, getCategoryGroupForCategory } from '@/lib/categories';
@@ -16,6 +32,21 @@ import { getAllComercios, getLatestPublications } from '@/lib/firebase/firestore
 import { sampleComercios, samplePublicaciones } from '@/lib/mockData';
 import { buildWhatsappUrl } from '@/lib/utils/format';
 import type { Comercio, Publicacion } from '@/types';
+
+const categoryTiles = [
+  { label: 'Comida y bebidas', category: 'Comida', Icon: Utensils },
+  { label: 'Celulares y tecnologia', category: 'Tecnologia', Icon: Smartphone },
+  { label: 'Servicios locales', category: 'Servicios', Icon: Wrench },
+  { label: 'Moda y bienestar', category: 'Moda', Icon: Shirt },
+  { label: 'Hogar y vivienda', category: 'Hogar', Icon: HomeIcon },
+  { label: 'Electricidad', category: 'Electricidad', Icon: PlugZap },
+  { label: 'Autos y motos', category: 'Autos', Icon: Car },
+  { label: 'Profesionales', category: 'Servicios', Icon: BriefcaseBusiness },
+  { label: 'Ofertas', category: 'Todos', Icon: BadgePercent },
+  { label: 'Locales destacados', category: 'Todos', Icon: Store },
+  { label: 'Inmuebles', category: 'Vivienda', Icon: Building2 },
+  { label: 'Computacion', category: 'Tecnologia', Icon: CircuitBoard }
+];
 
 export default function Home() {
   const router = useRouter();
@@ -75,6 +106,53 @@ export default function Home() {
 
   const cityOptions = useMemo(() => getCityOptions(comercios), [comercios]);
   const categoryOptions = useMemo(() => getCategoriesForGroup(selectedCategoryGroup), [selectedCategoryGroup]);
+
+  const quickActions = [
+    {
+      label: 'Ingresa a tu cuenta',
+      description: 'Administra tu comercio y publicaciones.',
+      cta: 'Entrar',
+      href: '/login',
+      Icon: Store
+    },
+    {
+      label: 'Comercios cerca',
+      description: 'Filtra por ciudad y categoria.',
+      cta: 'Buscar',
+      href: '/comercios',
+      Icon: MapPin
+    },
+    {
+      label: 'Ofertas recientes',
+      description: 'Mira productos y servicios publicados.',
+      cta: 'Ver ofertas',
+      href: '#publicaciones',
+      Icon: BadgePercent
+    },
+    {
+      label: 'Categorias',
+      description: 'Explora rubros populares.',
+      cta: 'Explorar',
+      href: '#categorias',
+      Icon: Building2
+    },
+    {
+      label: 'Comparte la guia',
+      description: 'Pasa la app a otro cliente.',
+      cta: 'Compartir',
+      href: '#compartir',
+      Icon: MessageCircle
+    },
+    {
+      label: 'Vende con nosotros',
+      description: 'Publica tus servicios gratis.',
+      cta: 'Empezar',
+      href: adminWhatsappUrl,
+      Icon: BriefcaseBusiness,
+      external: true
+    }
+  ];
+
   const handleSelectCategoryGroup = (group: string) => {
     setSelectedCategoryGroup(group);
     setSelectedCategory('Todos');
@@ -109,153 +187,218 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen bg-surface px-3 pb-24 pt-20 text-slate-950 sm:px-5">
-      <div className="mx-auto max-w-7xl space-y-4">
-        <section className="grid gap-4 pt-1 lg:grid-cols-[1.15fr_0.85fr] lg:items-end">
-          <div className="space-y-3">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-accent">ComerciosPY</p>
-            <h1 className="max-w-3xl text-2xl font-semibold leading-tight sm:text-4xl">
-              Directorio local para encontrar y contactar comercios en minutos.
-            </h1>
-            <p className="max-w-2xl text-sm leading-6 text-slate-600">
-              Busca por ciudad, rubro o categoria. Abri WhatsApp, llama o mira la ubicacion sin registrarte.
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {['Gratis', 'Sin registro', 'WhatsApp directo', 'Filtro por ciudad'].map((item) => (
-                <span key={item} className="rounded-md bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200">
-                  {item}
-                </span>
-              ))}
+    <main className="min-h-screen overflow-x-hidden bg-[#ededed] pb-24 pt-[68px] text-slate-950 sm:pt-[70px]">
+      <section className="bg-[linear-gradient(180deg,#dc2626_0%,#b91c1c_100%)] text-white">
+        <div className="mx-auto max-w-7xl px-3 pb-10 pt-5 sm:px-5 sm:pb-12">
+          <div className="grid gap-5 lg:grid-cols-[1fr_320px] lg:items-end">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-red-100">ComerciosPY</p>
+              <h1 className="mt-2 max-w-[340px] text-[24px] font-black leading-[1.04] sm:max-w-3xl sm:text-4xl">
+                Lo mejor de tu zona esta mas cerca.
+              </h1>
+              <p className="mt-2 max-w-[330px] text-[11px] font-bold uppercase leading-4 text-red-50 sm:max-w-xl sm:text-[12px]">
+                <span className="sm:hidden">Busca comercios, servicios y ofertas.</span>
+                <span className="hidden sm:inline">Busca comercios, servicios, ofertas y contactos por WhatsApp.</span>
+              </p>
+              <form
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  handleSearch();
+                }}
+                className="mt-4 flex max-w-full overflow-hidden rounded-md bg-white p-1 shadow-[0_14px_34px_rgba(127,29,29,0.28)] sm:max-w-3xl"
+              >
+                <label htmlFor="home-search" className="sr-only">Buscar comercios</label>
+                <input
+                  id="home-search"
+                  type="search"
+                  value={searchValue}
+                  onChange={(event) => setSearchValue(event.target.value)}
+                  placeholder="Buscar productos, servicios, marcas o ciudades"
+                  className="h-10 min-w-0 flex-1 px-3 text-[13px] font-semibold text-slate-900 outline-none placeholder:text-slate-400"
+                />
+                <button
+                  type="submit"
+                  className="inline-flex h-10 items-center justify-center gap-1 rounded-md bg-slate-950 px-3 text-[12px] font-bold text-white transition hover:bg-slate-800 sm:min-w-[92px]"
+                >
+                  <Search className="h-4 w-4" />
+                  <span className="hidden sm:inline">Buscar</span>
+                </button>
+              </form>
+
+              <div className="mt-3 flex max-w-full min-w-0 gap-2 overflow-x-auto pb-1 scrollbar-none">
+                {categoryGroups.slice(0, 6).map((group) => (
+                  <button
+                    key={group.id}
+                    type="button"
+                    onClick={() => handleSelectCategoryGroup(group.id)}
+                    className={`shrink-0 rounded-md px-2.5 py-1 text-[10px] font-bold transition ${
+                      selectedCategoryGroup === group.id
+                        ? 'bg-white text-accent'
+                        : 'bg-white/15 text-red-50 hover:bg-white/25'
+                    }`}
+                  >
+                    {group.label}
+                  </button>
+                ))}
+              </div>
             </div>
-            <div className="grid max-w-xl grid-cols-3 gap-2 pt-2">
+
+            <div className="grid max-w-full grid-cols-3 gap-2 rounded-md bg-white/12 p-2 ring-1 ring-white/15">
               {[
                 { label: 'Comercios', value: visibleComercios.length },
                 { label: 'Ciudades', value: cityOptions.length },
-                { label: 'Novedades', value: publicaciones.length }
+                { label: 'Avisos', value: publicaciones.length }
               ].map((item) => (
-                <div key={item.label} className="rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm">
-                  <p className="text-lg font-semibold text-slate-950">{item.value}</p>
-                  <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">{item.label}</p>
+                <div key={item.label} className="min-w-0 rounded-md bg-white px-2 py-2 text-center text-slate-950">
+                  <p className="text-lg font-black leading-none">{item.value}</p>
+                  <p className="mt-1 text-[9px] font-bold uppercase text-slate-500">{item.label}</p>
                 </div>
               ))}
             </div>
           </div>
+        </div>
+      </section>
 
-          <div className="hidden rounded-lg border border-slate-200 bg-white p-4 shadow-sm lg:block">
-            <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-red-50 text-accent">
-                <Search className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-slate-950">Acceso gratis para usuarios</p>
-                <p className="mt-1 text-sm leading-6 text-slate-600">Filtra por ciudad y categoria, abre WhatsApp, llama o mira la ubicacion sin registrarte.</p>
-              </div>
-            </div>
-            <Link
-              href="/comercios"
-              className="mt-4 inline-flex h-10 w-full items-center justify-center gap-2 rounded-md bg-accent px-4 text-sm font-semibold text-white transition hover:bg-red-700"
-            >
-              <Search className="h-4 w-4" />
-              Buscar gratis
-            </Link>
-            <a
-              href={adminWhatsappUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="mt-3 inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-            >
-              <MessageCircle className="h-4 w-4" />
-              Soy comercio y quiero aparecer
-            </a>
-            <div className="mt-3 border-t border-slate-100 pt-3">
-              <ShareAppButton mode="panel" />
-            </div>
-          </div>
+      <div className="mx-auto -mt-7 max-w-7xl space-y-3 px-3 sm:px-5">
+        <section className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+          {quickActions.map((action) => {
+            const Icon = action.Icon;
+            const content = (
+              <>
+                <div className="flex h-11 items-center justify-center rounded-md bg-slate-50 text-accent">
+                  <Icon className="h-5 w-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[12px] font-black text-slate-950">{action.label}</p>
+                  <p className="mt-1 line-clamp-2 text-[10px] font-medium leading-4 text-slate-500">{action.description}</p>
+                  <span className="mt-2 inline-flex h-6 items-center rounded bg-red-50 px-2 text-[10px] font-bold text-accent">
+                    {action.cta}
+                  </span>
+                </div>
+              </>
+            );
+
+            return action.external ? (
+              <a
+                key={action.label}
+                href={action.href}
+                target="_blank"
+                rel="noreferrer"
+                className="flex min-h-[118px] min-w-0 flex-col gap-2 rounded-md border border-slate-200 bg-white p-2 shadow-sm transition hover:border-red-200 hover:shadow-soft"
+              >
+                {content}
+              </a>
+            ) : (
+              <Link
+                key={action.label}
+                href={action.href}
+                className="flex min-h-[118px] min-w-0 flex-col gap-2 rounded-md border border-slate-200 bg-white p-2 shadow-sm transition hover:border-red-200 hover:shadow-soft"
+              >
+                {content}
+              </Link>
+            );
+          })}
         </section>
 
-        <section className="space-y-3">
-          <SearchBar
-            value={searchValue}
-            onChange={(event) => setSearchValue(event.target.value)}
-            onSubmit={handleSearch}
-            placeholder="Buscar negocio, rubro o direccion"
-            buttonLabel="Ir"
-            size="compact"
-          />
-          <div className="space-y-3 rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+        <section className="grid gap-3 lg:grid-cols-[1fr_260px]">
+          <div className="rounded-md border border-slate-200 bg-white p-3 shadow-sm">
             <div className="flex items-center justify-between gap-3">
-              <p className="text-sm font-semibold text-slate-950">Filtros rapidos</p>
-              <span className="text-xs font-semibold text-slate-500">{visibleComercios.length} resultados</span>
+              <div>
+                <h2 className="text-[15px] font-black text-slate-950">Filtros rapidos</h2>
+                <p className="mt-0.5 text-[11px] font-semibold text-slate-500">{visibleComercios.length} resultados disponibles</p>
+              </div>
+              <Link href="/comercios" className="inline-flex items-center gap-1 text-[11px] font-bold text-accent">
+                Ver todos
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
             </div>
-            <div className="grid gap-3 sm:grid-cols-3">
+            <div className="mt-3 grid gap-2 sm:grid-cols-3">
               <FilterSelect id="home-city-filter" label="Ciudad" value={selectedCity} options={cityOptions} onChange={setSelectedCity} />
               <FilterSelect id="home-category-group-filter" label="Grupo" value={selectedCategoryGroup} options={categoryGroups} onChange={handleSelectCategoryGroup} />
               <FilterSelect id="home-category-filter" label="Categoria" value={selectedCategory} options={categoryOptions} onChange={handleSelectCategory} />
             </div>
           </div>
-          <a
-            href={adminWhatsappUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm lg:hidden"
-          >
-            <span>Soy comercio o prestador</span>
-            <span className="text-accent">Quiero aparecer</span>
-          </a>
-          <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm lg:hidden">
-            <ShareAppButton mode="panel" />
+
+          <div id="compartir" className="rounded-md border border-slate-200 bg-white p-3 shadow-sm">
+            <p className="text-[13px] font-black text-slate-950">ComerciosPY en tu celular</p>
+            <p className="mt-1 text-[11px] font-medium leading-4 text-slate-500">Comparte la guia o guardala para encontrar contactos rapido.</p>
+            <div className="mt-3">
+              <ShareAppButton mode="panel" />
+            </div>
           </div>
         </section>
 
-        <section className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-3">
+        <section id="categorias" className="rounded-md border border-slate-200 bg-white p-3 shadow-sm">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-[15px] font-black text-slate-950">Categorias</h2>
+            <Link href="/comercios" className="text-[11px] font-bold text-accent">
+              Mostrar todas
+            </Link>
+          </div>
+          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            {categoryTiles.map((tile) => {
+              const Icon = tile.Icon;
+              const href = tile.category === 'Todos' ? '/comercios' : `/comercios?category=${encodeURIComponent(tile.category)}`;
+              return (
+                <Link key={`${tile.label}-${tile.category}`} href={href} className="grid min-w-0 grid-cols-[54px_minmax(0,1fr)] overflow-hidden rounded-md border border-slate-200 transition hover:border-red-200 hover:bg-red-50/30 sm:grid-cols-[66px_minmax(0,1fr)]">
+                  <div className="flex h-14 items-center justify-center bg-slate-50 text-slate-500">
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <div className="flex min-w-0 items-center px-3">
+                    <p className="line-clamp-2 text-[12px] font-bold leading-4 text-slate-800">{tile.label}</p>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+
+        <section className="space-y-2">
+          <div className="flex items-center justify-between gap-3">
             <div>
-              <h2 className="text-xl font-semibold text-slate-950">Negocios disponibles</h2>
-              <p className="mt-1 text-sm text-slate-500">
-                {visibleComercios.length} resultados gratis{selectedCity !== 'Todas' ? ` en ${selectedCity}` : ''} para consultar ahora.
+              <h2 className="text-[17px] font-black text-slate-950">Negocios disponibles</h2>
+              <p className="text-[11px] font-semibold text-slate-500">
+                {visibleComercios.length} resultados{selectedCity !== 'Todas' ? ` en ${selectedCity}` : ''}.
               </p>
             </div>
-            <Link href="/comercios" className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-soft transition hover:border-slate-300">
+            <Link href="/comercios" className="rounded-md bg-white px-3 py-2 text-[11px] font-bold text-slate-700 shadow-sm ring-1 ring-slate-200 transition hover:bg-slate-50">
               Ver todos
             </Link>
           </div>
 
           <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
             {loadingComercios ? (
-              <p className="rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-500 shadow-sm sm:col-span-2 xl:col-span-3">Cargando comercios...</p>
+              <p className="rounded-md border border-slate-200 bg-white p-3 text-[12px] font-semibold text-slate-500 shadow-sm sm:col-span-2 xl:col-span-3">Cargando comercios...</p>
             ) : visibleComercios.length > 0 ? (
               visibleComercios.slice(0, 12).map((comercio) => <CommerceCard key={comercio.id} comercio={comercio} />)
             ) : (
-              <p className="rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-500 shadow-sm sm:col-span-2 xl:col-span-3">No hay comercios que coincidan con tu busqueda.</p>
+              <p className="rounded-md border border-slate-200 bg-white p-3 text-[12px] font-semibold text-slate-500 shadow-sm sm:col-span-2 xl:col-span-3">No hay comercios que coincidan con tu busqueda.</p>
             )}
           </div>
         </section>
 
-        <section className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-3">
+        <section id="publicaciones" className="space-y-2">
+          <div className="flex items-center justify-between gap-3">
             <div>
-              <div className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-accent" />
-                <h2 className="text-xl font-semibold text-slate-950">Publicaciones recientes</h2>
-              </div>
-              <p className="mt-1 text-sm text-slate-500">Ofertas, servicios y novedades cargadas por los comercios.</p>
+              <h2 className="text-[17px] font-black text-slate-950">Publicaciones recientes</h2>
+              <p className="text-[11px] font-semibold text-slate-500">Ofertas, servicios y novedades cargadas por comercios.</p>
             </div>
             <a
               href={adminWhatsappUrl}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-2 rounded-xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white shadow-soft transition hover:bg-slate-800"
+              className="rounded-md bg-slate-950 px-3 py-2 text-[11px] font-bold text-white shadow-sm transition hover:bg-slate-800"
             >
               Soy comercio
             </a>
           </div>
           <div className="grid gap-3 lg:grid-cols-3">
             {loadingPublicaciones ? (
-              <p className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-500 shadow-soft">Cargando publicaciones...</p>
+              <p className="rounded-md border border-slate-200 bg-white p-3 text-[12px] font-semibold text-slate-500 shadow-sm">Cargando publicaciones...</p>
             ) : publicaciones.length > 0 ? (
               publicaciones.slice(0, 3).map((publicacion) => <PublicacionCard key={publicacion.id} publicacion={publicacion} />)
             ) : (
-              <p className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-500 shadow-soft">No hay publicaciones recientes.</p>
+              <p className="rounded-md border border-slate-200 bg-white p-3 text-[12px] font-semibold text-slate-500 shadow-sm">No hay publicaciones recientes.</p>
             )}
           </div>
         </section>
