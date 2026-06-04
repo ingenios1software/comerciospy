@@ -1,7 +1,7 @@
 "use client";
 
 import Link from 'next/link';
-import { Home, List, LogOut, PlusCircle, Store, User, Users } from 'lucide-react';
+import { Heart, Home, List, LogOut, PlusCircle, Store, User, Users } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/firebase/auth-context';
 
@@ -24,12 +24,14 @@ export function BottomNavigation() {
   const items: NavigationItem[] = loading
     ? [
         { label: 'Inicio', href: '/', icon: Home },
-        { label: 'Guia', href: '/comercios', icon: List }
+        { label: 'Guia', href: '/comercios', icon: List },
+        { label: 'Favoritos', href: '/favoritos', icon: Heart }
       ]
     : user && profile?.rol === 'superadmin'
     ? [
         { label: 'Inicio', href: '/', icon: Home },
         { label: 'Guia', href: '/comercios', icon: List },
+        { label: 'Favoritos', href: '/favoritos', icon: Heart },
         { label: 'Usuarios', href: '/admin/usuarios', icon: Users },
         { label: 'Panel', href: '/dashboard', icon: User }
       ]
@@ -37,12 +39,14 @@ export function BottomNavigation() {
     ? [
         { label: 'Inicio', href: '/', icon: Home },
         { label: 'Guia', href: '/comercios', icon: List },
+        { label: 'Favoritos', href: '/favoritos', icon: Heart },
         { label: 'Publicar', href: '/publicar', icon: PlusCircle },
         { label: 'Perfil', href: '/perfil', icon: User }
       ]
     : [
         { label: 'Inicio', href: '/', icon: Home },
         { label: 'Buscar', href: '/comercios', icon: List },
+        { label: 'Favoritos', href: '/favoritos', icon: Heart },
         { label: 'Comercio', href: '/login', icon: Store }
       ];
   const showLogout = !loading && Boolean(user);
@@ -59,7 +63,7 @@ export function BottomNavigation() {
               key={item.href}
               href={item.href}
               aria-current={active ? 'page' : undefined}
-              className={`flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-xl px-2 py-2 text-[11px] font-semibold transition ${
+              className={`flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-xl px-1 py-2 text-[10px] font-semibold transition ${
                 active ? 'bg-slate-950 text-white shadow-soft' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950'
               }`}
             >
@@ -72,7 +76,7 @@ export function BottomNavigation() {
           <button
             type="button"
             onClick={handleLogout}
-            className="flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-xl px-2 py-2 text-[11px] font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-950"
+            className="flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-xl px-1 py-2 text-[10px] font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-950"
           >
             <LogOut className="h-4 w-4" />
             <span className="truncate">Salir</span>

@@ -154,7 +154,7 @@ function useSpeechSupport() {
 }
 
 export function VisitorVoiceAssistant() {
-  const { user, loading: authLoading } = useAuth();
+  const { loading: authLoading } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
   const voiceSupported = useSpeechSupport();
@@ -167,7 +167,7 @@ export function VisitorVoiceAssistant() {
   const [answer, setAnswer] = useState('Decime que queres encontrar.');
   const [results, setResults] = useState<Comercio[]>([]);
 
-  const shouldShow = !authLoading && !user && (pathname === '/' || pathname.startsWith('/comercios'));
+  const shouldShow = !authLoading && (pathname === '/' || pathname.startsWith('/comercios'));
 
   useEffect(() => {
     if (!shouldShow || comercios.length > 0 || loadingComercios) return;
@@ -342,7 +342,7 @@ export function VisitorVoiceAssistant() {
                 >
                   <span className="block font-semibold text-slate-950">{comercio.nombre}</span>
                   <span className="mt-1 block truncate text-xs text-slate-500">
-                    {comercio.rubro} · {comercio.ciudad}
+                    {comercio.rubro} - {comercio.ciudad}
                   </span>
                 </Link>
               ))}

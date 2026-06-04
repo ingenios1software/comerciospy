@@ -153,7 +153,7 @@ export default function DashboardPage() {
               </div>
               <div className="grid gap-3 lg:grid-cols-3">
                 {publicaciones.length > 0 ? (
-                  publicaciones.map((publicacion) => <PublicacionCard key={publicacion.id} publicacion={publicacion} />)
+                  publicaciones.map((publicacion) => <PublicacionCard key={publicacion.id} publicacion={publicacion} comercio={comercio} />)
                 ) : (
                   <p className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-500 shadow-soft">Todavia no hay publicaciones.</p>
                 )}

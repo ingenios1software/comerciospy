@@ -96,6 +96,7 @@ export default function Home() {
       return map;
     }, new Map<string, Publicacion[]>());
   }, [publicaciones]);
+  const comerciosById = useMemo(() => new Map(comercios.map((comercio) => [comercio.id, comercio])), [comercios]);
 
   const visibleComercios = useMemo(() => {
     return comercios.filter((comercio) => {
@@ -401,7 +402,9 @@ export default function Home() {
             {loadingPublicaciones ? (
               <p className="rounded-md border border-slate-200 bg-white p-3 text-[12px] font-semibold text-slate-500 shadow-sm">Cargando publicaciones...</p>
             ) : publicaciones.length > 0 ? (
-              publicaciones.slice(0, 3).map((publicacion) => <PublicacionCard key={publicacion.id} publicacion={publicacion} />)
+              publicaciones
+                .slice(0, 3)
+                .map((publicacion) => <PublicacionCard key={publicacion.id} publicacion={publicacion} comercio={comerciosById.get(publicacion.comercioId)} />)
             ) : (
               <p className="rounded-md border border-slate-200 bg-white p-3 text-[12px] font-semibold text-slate-500 shadow-sm">No hay publicaciones recientes.</p>
             )}

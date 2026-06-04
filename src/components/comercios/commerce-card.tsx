@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { ArrowUpRight, Clock, Images, MapPin, MessageCircle, Phone, Store } from 'lucide-react';
 import type { Comercio, CommercePreview } from '@/types';
+import { FavoriteButton } from '@/components/favorites/favorite-button';
 import { buildMapsUrl, buildWhatsappUrl, cleanPhone } from '@/lib/utils/format';
 
 type CommerceCardProps = {
@@ -32,19 +33,33 @@ export function CommerceCard({ comercio }: CommerceCardProps) {
   return (
     <article className="h-full rounded-lg border border-slate-200 bg-white p-2 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-soft">
       <div className="grid h-full grid-cols-[74px_1fr] gap-2">
-        <Link href={`/comercios/${comercio.id}`} className="group relative h-[74px] overflow-hidden rounded-md bg-slate-100">
-          {mainImage ? (
-            <img src={mainImage} alt={comercio.nombre} className="h-full w-full object-cover transition duration-300 group-hover:scale-105" />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center bg-slate-100 text-slate-400">
-              <Store className="h-5 w-5" />
-            </div>
-          )}
-          <span className="absolute bottom-1 left-1 inline-flex items-center gap-1 rounded bg-white/95 px-1.5 py-0.5 text-[10px] font-semibold text-slate-700 shadow-sm">
-            <Images className="h-3 w-3" />
-            {photos.length}
-          </span>
-        </Link>
+        <div className="relative h-[74px] overflow-hidden rounded-md bg-slate-100">
+          <Link href={`/comercios/${comercio.id}`} className="group block h-full">
+            {mainImage ? (
+              <img src={mainImage} alt={comercio.nombre} className="h-full w-full object-cover transition duration-300 group-hover:scale-105" />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center bg-slate-100 text-slate-400">
+                <Store className="h-5 w-5" />
+              </div>
+            )}
+            <span className="absolute bottom-1 left-1 inline-flex items-center gap-1 rounded bg-white/95 px-1.5 py-0.5 text-[10px] font-semibold text-slate-700 shadow-sm">
+              <Images className="h-3 w-3" />
+              {photos.length}
+            </span>
+          </Link>
+          <FavoriteButton
+            compact
+            item={{
+              kind: 'comercio',
+              id: comercio.id,
+              title: comercio.nombre,
+              subtitle: `${comercio.rubro} - ${comercio.ciudad}`,
+              href: `/comercios/${comercio.id}`,
+              imageUrl: mainImage
+            }}
+            className="absolute right-1 top-1"
+          />
+        </div>
 
         <div className="min-w-0 self-start">
           <div className="flex min-w-0 items-center gap-1.5">

@@ -33,11 +33,13 @@ export function Navbar() {
     ? [
         { label: 'Inicio', href: '/' },
         { label: 'Guia', href: '/comercios' },
+        { label: 'Favoritos', href: '/favoritos' },
         { label: 'Panel', href: '/dashboard' }
       ]
     : [
         { label: 'Inicio', href: '/' },
         { label: 'Buscar gratis', href: '/comercios' },
+        { label: 'Favoritos', href: '/favoritos' },
         { label: 'Panel comercio', href: '/login' }
       ];
   const isActive = (href: string) => (href === '/' ? pathname === '/' : pathname.startsWith(href));
