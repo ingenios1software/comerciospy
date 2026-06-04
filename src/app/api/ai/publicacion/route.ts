@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { publicationCategories } from '@/lib/categories';
 import type { AiPublicationSuggestion, Publicacion } from '@/types';
 
 export const runtime = 'nodejs';
@@ -25,19 +26,7 @@ type OpenAiResponse = {
 
 const allowedTipos = ['producto', 'servicio', 'oferta', 'novedad'] as const;
 const allowedImageTypes = ['image/jpeg', 'image/png', 'image/webp'];
-const allowedCategories = [
-  'Comida',
-  'Bebidas',
-  'Moda',
-  'Bienestar',
-  'Servicios',
-  'Vivienda',
-  'Electricidad',
-  'Plomeria',
-  'Tecnologia',
-  'Hogar',
-  'Autos'
-];
+const allowedCategories = publicationCategories.map((category) => category.label);
 
 const publicationSuggestionSchema = {
   type: 'object',
@@ -208,6 +197,8 @@ export async function POST(request: Request) {
     currentDescription ? `Descripcion actual: ${currentDescription}.` : '',
     'Devuelve solo JSON valido con estas claves: titulo, descripcion, categoria, tipo, ideas, mejorasFoto, textoWhatsapp.',
     `categoria debe ser una de: ${allowedCategories.join(', ')}.`,
+    'La categoria debe representar el articulo o servicio publicado, no necesariamente el rubro principal del negocio.',
+    'Ejemplos: si una tienda de ropa publica perfume, usa Perfumes; si publica auriculares o celulares, usa Electronica o Celulares.',
     `tipo debe ser una de: ${allowedTipos.join(', ')}.`,
     'ideas y mejorasFoto deben ser listas breves. No inventes precios, direcciones ni datos medicos.'
   ]

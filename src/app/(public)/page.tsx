@@ -16,7 +16,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { CommerceCard } from '@/components/comercios/commerce-card';
 import { PublicacionCard } from '@/components/publicaciones/publicacion-card';
 import { FilterSelect } from '@/components/ui/filter-select';
-import { categoryGroups, categoryMatchesGroup, getCategoriesForGroup, getCategoryGroupForCategory } from '@/lib/categories';
+import { categoryGroups, categoryMatchesFilter, getCategoriesForGroup, getCategoryGroupForCategory } from '@/lib/categories';
 import { cityMatches, getCityOptions } from '@/lib/cities';
 import { getAllComercios, getAllPublications } from '@/lib/firebase/firestore';
 import { sampleComercios, samplePublicaciones } from '@/lib/mockData';
@@ -73,15 +73,27 @@ export default function Home() {
 
   const visibleComercios = useMemo(() => {
     return comercios.filter((comercio) => {
-      const matchesCategory =
-        selectedCategory === 'Todos'
-          ? categoryMatchesGroup(comercio.categoria, selectedCategoryGroup)
-          : comercio.categoria === selectedCategory;
+      const publicacionesDelComercio = publicacionesByCommerceId.get(comercio.id) ?? [];
+      const categoryValues = [comercio.categoria, ...publicacionesDelComercio.map((publicacion) => publicacion.categoria)];
+      const matchesCategory = categoryValues.some((category) => categoryMatchesFilter(category, selectedCategory, selectedCategoryGroup));
       const matchesCity = cityMatches(comercio.ciudad, selectedCity);
-      const matchesSearch = matchesCommerceSearch(comercio, searchValue, publicacionesByCommerceId.get(comercio.id) ?? []);
+      const matchesSearch = matchesCommerceSearch(comercio, searchValue, publicacionesDelComercio);
       return matchesCategory && matchesCity && matchesSearch;
     });
   }, [comercios, publicacionesByCommerceId, searchValue, selectedCategory, selectedCategoryGroup, selectedCity]);
+
+  const visiblePublicaciones = useMemo(() => {
+    return publicaciones.filter((publicacion) => {
+      const comercio = comerciosById.get(publicacion.comercioId);
+      const matchesCategory = [publicacion.categoria, comercio?.categoria].some((category) =>
+        categoryMatchesFilter(category, selectedCategory, selectedCategoryGroup)
+      );
+      const matchesCity = cityMatches(publicacion.ciudad || comercio?.ciudad || '', selectedCity);
+      const matchesSearch = !searchValue.trim() || (comercio ? matchesCommerceSearch(comercio, searchValue, [publicacion]) : false);
+
+      return matchesCategory && matchesCity && matchesSearch;
+    });
+  }, [comerciosById, publicaciones, searchValue, selectedCategory, selectedCategoryGroup, selectedCity]);
 
   const cityOptions = useMemo(() => getCityOptions(comercios), [comercios]);
   const categoryOptions = useMemo(() => getCategoriesForGroup(selectedCategoryGroup), [selectedCategoryGroup]);
@@ -212,7 +224,7 @@ export default function Home() {
               {[
                 { label: 'Comercios', value: visibleComercios.length },
                 { label: 'Ciudades', value: cityOptions.length },
-                { label: 'Avisos', value: publicaciones.length }
+                { label: 'Avisos', value: visiblePublicaciones.length }
               ].map((item) => (
                 <div key={item.label} className="min-w-0 rounded-md bg-white px-2 py-2 text-center text-slate-950">
                   <p className="text-lg font-black leading-none">{item.value}</p>
@@ -241,8 +253,8 @@ export default function Home() {
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
             {loadingPublicaciones ? (
               <p className="col-span-2 rounded-md border border-slate-200 bg-white p-3 text-[12px] font-semibold text-slate-500 shadow-sm sm:col-span-3 lg:col-span-4 xl:col-span-6">Cargando publicaciones...</p>
-            ) : publicaciones.length > 0 ? (
-              publicaciones
+            ) : visiblePublicaciones.length > 0 ? (
+              visiblePublicaciones
                 .slice(0, 12)
                 .map((publicacion) => <PublicacionCard key={publicacion.id} publicacion={publicacion} comercio={comerciosById.get(publicacion.comercioId)} variant="compact" />)
             ) : (

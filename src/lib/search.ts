@@ -63,11 +63,13 @@ export function getSearchTerms(query: string) {
 }
 
 function getCategorySearchValues(categoryId: string) {
-  const category = categories.find((item) => item.id === categoryId);
-  const groups = categoryGroups.filter((group) => group.id !== 'Todos' && group.categoryIds.includes(categoryId));
+  const category = categories.find((item) => item.id === categoryId || item.label === categoryId);
+  const normalizedCategoryId = category?.id ?? categoryId;
+  const groups = categoryGroups.filter((group) => group.id !== 'Todos' && group.categoryIds.includes(normalizedCategoryId));
 
   return [
     categoryId,
+    category?.id,
     category?.label,
     ...groups.flatMap((group) => [group.id, group.label])
   ];

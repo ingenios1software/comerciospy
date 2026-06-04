@@ -7,7 +7,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { CommerceCard } from '@/components/comercios/commerce-card';
 import { FilterSelect } from '@/components/ui/filter-select';
 import { SearchBar } from '@/components/ui/search-bar';
-import { categoryGroups, categoryMatchesGroup, getCategoriesForGroup, getCategoryGroupForCategory } from '@/lib/categories';
+import { categoryGroups, categoryMatchesFilter, getCategoriesForGroup, getCategoryGroupForCategory } from '@/lib/categories';
 import { cityMatches, getCityOptions } from '@/lib/cities';
 import { getAllComercios, getAllPublications } from '@/lib/firebase/firestore';
 import { sampleComercios, samplePublicaciones } from '@/lib/mockData';
@@ -102,12 +102,11 @@ export default function ComerciosPage() {
   const filteredComercios = useMemo(
     () =>
       comercios.filter((comercio) => {
-        const matchesCategory =
-          selectedCategory === 'Todos'
-            ? categoryMatchesGroup(comercio.categoria, selectedCategoryGroup)
-            : comercio.categoria === selectedCategory;
+        const publicacionesDelComercio = publicacionesByCommerceId.get(comercio.id) ?? [];
+        const categoryValues = [comercio.categoria, ...publicacionesDelComercio.map((publicacion) => publicacion.categoria)];
+        const matchesCategory = categoryValues.some((category) => categoryMatchesFilter(category, selectedCategory, selectedCategoryGroup));
         const matchesCity = cityMatches(comercio.ciudad, selectedCity);
-        const matchesSearch = matchesCommerceSearch(comercio, search, publicacionesByCommerceId.get(comercio.id) ?? []);
+        const matchesSearch = matchesCommerceSearch(comercio, search, publicacionesDelComercio);
         return matchesCategory && matchesCity && matchesSearch;
       }),
     [comercios, publicacionesByCommerceId, search, selectedCategory, selectedCategoryGroup, selectedCity]

@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/firebase/auth-context';
 import { uploadFile } from '@/lib/firebase/storage';
 import { createPublication, getComercioById } from '@/lib/firebase/firestore';
-import { categories } from '@/lib/categories';
+import { publicationCategories } from '@/lib/categories';
 import { RenewalNotice } from '@/components/subscription/renewal-notice';
 import { isSubscriptionExpired } from '@/lib/subscription';
 import type { AiPublicationSuggestion, Comercio, Publicacion } from '@/types';
@@ -367,12 +367,12 @@ export default function PublicarPage() {
   const router = useRouter();
   const { user, profile, loading } = useAuth();
   const subscriptionExpired = profile?.rol === 'comercio' && isSubscriptionExpired(profile);
-  const categoryOptions = categories.filter((category) => category.id !== 'Todos');
+  const categoryOptions = publicationCategories;
   const [comercio, setComercio] = useState<Comercio | null>(null);
   const [titulo, setTitulo] = useState('');
   const [tipo, setTipo] = useState<Publicacion['tipo']>('producto');
   const [precio, setPrecio] = useState('');
-  const [categoria, setCategoria] = useState(categoryOptions[0]?.label ?? 'Servicios');
+  const [categoria, setCategoria] = useState('Servicios');
   const [descripcion, setDescripcion] = useState('');
   const [mediaFile, setMediaFile] = useState<File | null>(null);
   const [mediaKind, setMediaKind] = useState<MediaKind | null>(null);
@@ -390,7 +390,6 @@ export default function PublicarPage() {
       try {
         const data = await getComercioById(profile.comercioId);
         setComercio(data);
-        if (data?.categoria) setCategoria(data.categoria);
       } catch {
         setComercio(null);
       }
@@ -698,7 +697,7 @@ export default function PublicarPage() {
 
             <div>
               <label htmlFor="categoria" className="mb-2 block text-sm font-semibold text-slate-700">
-                Categoria
+                Categoria del articulo
               </label>
               <select
                 id="categoria"

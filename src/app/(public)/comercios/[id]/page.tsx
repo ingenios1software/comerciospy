@@ -18,6 +18,7 @@ export default function ComercioDetailPage() {
   const commerceId = params?.id as string | undefined;
   const [comercio, setComercio] = useState<Comercio | null>(null);
   const [publicaciones, setPublicaciones] = useState<Publicacion[]>([]);
+  const [selectedPublicationCategory, setSelectedPublicationCategory] = useState('Todos');
   const [activeGalleryIndex, setActiveGalleryIndex] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -60,6 +61,25 @@ export default function ComercioDetailPage() {
       alt: index === 0 ? `${comercio.nombre} portada` : `${comercio.nombre} foto ${index + 1}`
     }));
   }, [comercio, gallery]);
+
+  const publicationCategoryOptions = useMemo(() => {
+    const uniqueCategories = Array.from(new Set(publicaciones.map((publicacion) => publicacion.categoria).filter(Boolean))).sort((a, b) =>
+      a.localeCompare(b, 'es')
+    );
+
+    return ['Todos', ...uniqueCategories];
+  }, [publicaciones]);
+
+  useEffect(() => {
+    if (selectedPublicationCategory !== 'Todos' && !publicationCategoryOptions.includes(selectedPublicationCategory)) {
+      setSelectedPublicationCategory('Todos');
+    }
+  }, [publicationCategoryOptions, selectedPublicationCategory]);
+
+  const visiblePublicaciones = useMemo(() => {
+    if (selectedPublicationCategory === 'Todos') return publicaciones;
+    return publicaciones.filter((publicacion) => publicacion.categoria === selectedPublicationCategory);
+  }, [publicaciones, selectedPublicationCategory]);
 
   if (loading) {
     return (
@@ -193,11 +213,29 @@ export default function ComercioDetailPage() {
               Crear publicacion
             </Link>
           </div>
+          {publicationCategoryOptions.length > 2 ? (
+            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+              {publicationCategoryOptions.map((category) => (
+                <button
+                  key={category}
+                  type="button"
+                  onClick={() => setSelectedPublicationCategory(category)}
+                  className={`shrink-0 rounded-md px-3 py-1.5 text-[11px] font-bold transition ${
+                    selectedPublicationCategory === category
+                      ? 'bg-slate-950 text-white'
+                      : 'bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50'
+                  }`}
+                >
+                  {category === 'Todos' ? 'Todas' : category}
+                </button>
+              ))}
+            </div>
+          ) : null}
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-            {publicaciones.length > 0 ? (
-              publicaciones.map((publicacion) => <PublicacionCard key={publicacion.id} publicacion={publicacion} comercio={comercio} variant="compact" />)
+            {visiblePublicaciones.length > 0 ? (
+              visiblePublicaciones.map((publicacion) => <PublicacionCard key={publicacion.id} publicacion={publicacion} comercio={comercio} variant="compact" />)
             ) : (
-              <div className="col-span-2 rounded-2xl border border-slate-200 bg-white p-4 text-center text-sm text-slate-500 shadow-soft sm:col-span-3 lg:col-span-4 xl:col-span-5">No hay publicaciones para este comercio aun.</div>
+              <div className="col-span-2 rounded-2xl border border-slate-200 bg-white p-4 text-center text-sm text-slate-500 shadow-soft sm:col-span-3 lg:col-span-4 xl:col-span-5">{publicaciones.length > 0 ? 'No hay publicaciones en esta categoria.' : 'No hay publicaciones para este comercio aun.'}</div>
             )}
           </div>
         </section>
