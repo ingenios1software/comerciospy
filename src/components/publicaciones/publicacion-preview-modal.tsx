@@ -1,7 +1,7 @@
 "use client";
 
 import { type FormEvent, type TouchEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, Heart, Loader2, MessageCircle, Send, X } from 'lucide-react';
+import { CheckCircle2, ChevronLeft, ChevronRight, Heart, Loader2, MessageCircle, Send, X } from 'lucide-react';
 import { CartButton } from '@/components/cart/cart-button';
 import { FavoriteButton } from '@/components/favorites/favorite-button';
 import {
@@ -28,6 +28,9 @@ type PublicationPreviewModalProps = {
   items?: PublicationPreviewItem[];
   activeIndex?: number;
   onChange?: (index: number) => void;
+  canMarkSold?: (publicacion: Publicacion) => boolean;
+  onMarkSold?: (publicacion: Publicacion) => void | Promise<void>;
+  markingSold?: boolean;
   onClose: () => void;
 };
 
@@ -52,6 +55,9 @@ export function PublicacionPreviewModal({
   items,
   activeIndex = 0,
   onChange,
+  canMarkSold,
+  onMarkSold,
+  markingSold = false,
   onClose
 }: PublicationPreviewModalProps) {
   const previewItems = useMemo<PublicationPreviewItem[]>(
@@ -75,6 +81,7 @@ export function PublicacionPreviewModal({
     activeComercio?.whatsapp || activeComercio?.telefono,
     buildPublicationWhatsappMessage(activePublicacion, activeComercio, appOrigin)
   );
+  const showMarkSold = Boolean(onMarkSold && (!canMarkSold || canMarkSold(activePublicacion)));
   const [engagement, setEngagement] = useState<PublicationEngagement>(() => getInitialEngagement(activePublicacion.id));
   const [liked, setLiked] = useState(() => hasLikedPublication(activePublicacion.id));
   const [loadingEngagement, setLoadingEngagement] = useState(true);
@@ -327,6 +334,17 @@ export function PublicacionPreviewModal({
                 onFavoriteAdded={() => void handleLike()}
               />
               <CartButton item={cartItem} />
+              {showMarkSold ? (
+                <button
+                  type="button"
+                  onClick={() => void onMarkSold?.(activePublicacion)}
+                  disabled={markingSold}
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+                >
+                  <CheckCircle2 className="h-4 w-4" />
+                  {markingSold ? 'Marcando...' : 'Vendido'}
+                </button>
+              ) : null}
               {whatsappUrl !== '#' ? (
                 <a href={whatsappUrl} target="_blank" rel="noreferrer" className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 text-sm font-semibold text-white transition hover:bg-emerald-700">
                   <MessageCircle className="h-4 w-4" />

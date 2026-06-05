@@ -5,7 +5,10 @@ import { useMemo, useState } from 'react';
 import { CartButton } from '@/components/cart/cart-button';
 import { FavoriteButton } from '@/components/favorites/favorite-button';
 import { PublicacionPreviewModal, type PublicationPreviewItem } from '@/components/publicaciones/publicacion-preview-modal';
+import { useAuth } from '@/lib/firebase/auth-context';
+import { markPublicationAsSold } from '@/lib/firebase/firestore';
 import { likePublication } from '@/lib/publication-engagement';
+import { isSubscriptionExpired } from '@/lib/subscription';
 import type { Comercio, Publicacion } from '@/types';
 import { buildWhatsappUrl, formatPrice } from '@/lib/utils/format';
 import { buildPublicationWhatsappMessage, getPublicationCode, getPublicationHref, getPublicationMediaUrl } from '@/lib/publications';
@@ -20,7 +23,11 @@ type PublicacionCardProps = {
 };
 
 export function PublicacionCard({ publicacion, comercio, onMarkSold, markingSold = false, variant = 'default', previewItems }: PublicacionCardProps) {
+  const { user, profile } = useAuth();
   const [activePreviewIndex, setActivePreviewIndex] = useState<number | null>(null);
+  const [localMarkingSold, setLocalMarkingSold] = useState(false);
+  const [soldLocally, setSoldLocally] = useState(false);
+  const [markSoldError, setMarkSoldError] = useState('');
   const mediaUrl = getPublicationMediaUrl(publicacion);
   const isVideo = publicacion.mediaType === 'video' && Boolean(mediaUrl);
   const compact = variant === 'compact';
@@ -52,6 +59,39 @@ export function PublicacionCard({ publicacion, comercio, onMarkSold, markingSold
     const itemIndex = modalPreviewItems.findIndex((item) => item.publicacion.id === publicacion.id);
     setActivePreviewIndex(itemIndex >= 0 ? itemIndex : 0);
   };
+  const canMarkSoldAsOwner = (item: Publicacion) => {
+    const commerceOwnerId = profile?.comercioId ?? user?.uid;
+    return profile?.rol === 'comercio' && commerceOwnerId === item.comercioId && !isSubscriptionExpired(profile);
+  };
+  const canMarkSoldForPublication = (item: Publicacion) => Boolean(onMarkSold) || canMarkSoldAsOwner(item);
+  const canMarkSold = canMarkSoldForPublication(publicacion);
+  const canMarkSoldInPreview = modalPreviewItems.some((item) => canMarkSoldForPublication(item.publicacion));
+  const isMarkingSold = markingSold || localMarkingSold;
+
+  const handleMarkSold = async (targetPublicacion = publicacion) => {
+    setMarkSoldError('');
+
+    if (onMarkSold) {
+      await onMarkSold(targetPublicacion);
+      return;
+    }
+
+    setLocalMarkingSold(true);
+    try {
+      await markPublicationAsSold(targetPublicacion.id);
+      if (targetPublicacion.id === publicacion.id) {
+        setSoldLocally(true);
+      } else {
+        setActivePreviewIndex(null);
+      }
+    } catch {
+      setMarkSoldError('No se pudo marcar como vendido.');
+    } finally {
+      setLocalMarkingSold(false);
+    }
+  };
+
+  if (soldLocally) return null;
 
   return (
     <>
@@ -125,17 +165,18 @@ export function PublicacionCard({ publicacion, comercio, onMarkSold, markingSold
             <span className="truncate font-semibold text-slate-900">{formatPrice(publicacion.precio) || 'Consultar'}</span>
             <span className={`truncate bg-slate-100 font-semibold text-slate-600 ${compact ? 'rounded px-1.5 py-0.5 text-[10px]' : 'rounded-full px-3 py-1 text-xs'}`}>{publicacion.categoria}</span>
           </div>
-          {onMarkSold ? (
+          {canMarkSold ? (
             <button
               type="button"
-              onClick={() => onMarkSold(publicacion)}
-              disabled={markingSold}
+              onClick={() => void handleMarkSold(publicacion)}
+              disabled={isMarkingSold}
               className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-md bg-slate-950 px-3 text-xs font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
             >
               <CheckCircle2 className="h-4 w-4" />
-              {markingSold ? 'Marcando...' : 'Vendido'}
+              {isMarkingSold ? 'Marcando...' : 'Vendido'}
             </button>
           ) : null}
+          {markSoldError ? <p className="rounded-md bg-red-50 px-2 py-1.5 text-[11px] font-semibold text-accent">{markSoldError}</p> : null}
         </div>
       </article>
       {activePreviewIndex !== null ? (
@@ -145,6 +186,9 @@ export function PublicacionCard({ publicacion, comercio, onMarkSold, markingSold
           items={modalPreviewItems}
           activeIndex={activePreviewIndex}
           onChange={setActivePreviewIndex}
+          canMarkSold={canMarkSoldForPublication}
+          onMarkSold={canMarkSoldInPreview ? handleMarkSold : undefined}
+          markingSold={isMarkingSold}
           onClose={() => setActivePreviewIndex(null)}
         />
       ) : null}
