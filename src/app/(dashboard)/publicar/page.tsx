@@ -1,8 +1,8 @@
 "use client";
 
-import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from 'react';
+import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { ImagePlus, Loader2, Send, Sparkles } from 'lucide-react';
+import { ImagePlus, Loader2, Scissors, Send, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/firebase/auth-context';
 import { uploadFile } from '@/lib/firebase/storage';
@@ -14,6 +14,12 @@ import type { AiPublicationSuggestion, Comercio, Publicacion } from '@/types';
 
 type AiResponse = {
   suggestion?: AiPublicationSuggestion;
+  error?: string;
+};
+
+type BackgroundRemovalResponse = {
+  image?: string;
+  mimeType?: string;
   error?: string;
 };
 
@@ -253,6 +259,27 @@ async function preparePublicationImage(file: File) {
   });
 }
 
+async function removeImageBackground(file: File) {
+  const formData = new FormData();
+  formData.append('image', file);
+
+  const response = await fetch('/api/ai/quitar-fondo', {
+    method: 'POST',
+    body: formData
+  });
+  const data = (await response.json().catch(() => null)) as BackgroundRemovalResponse | null;
+
+  if (!response.ok || !data?.image) {
+    throw new Error(data?.error ?? 'No pudimos quitar el fondo de la foto.');
+  }
+
+  const mimeType = data.mimeType === 'image/png' ? 'image/png' : 'image/webp';
+  const extension = mimeType === 'image/png' ? 'png' : 'webp';
+  const fileName = `${file.name.replace(/\.[^.]+$/, '') || 'publicacion'}-sin-fondo.${extension}`;
+
+  return dataUrlToFile(`data:${mimeType};base64,${data.image}`, fileName);
+}
+
 async function preparePublicationVideo(file: File) {
   if (!isSupportedPublicationVideo(file)) {
     throw new Error('Formato no compatible. Usa un video MP4, WebM o MOV.');
@@ -363,9 +390,25 @@ function getAiAnalysisMessage(error: unknown) {
   return message || 'No se pudo analizar la foto.';
 }
 
+function getBackgroundRemovalMessage(error: unknown) {
+  const message = error instanceof Error ? error.message : '';
+  const searchable = message.toLowerCase();
+
+  if (searchable.includes('api key') || searchable.includes('openai_api_key') || searchable.includes('vercel')) {
+    return 'La IA no esta disponible por configuracion del servidor. La foto queda sin cambios.';
+  }
+
+  if (searchable.includes('creditos') || searchable.includes('billing') || searchable.includes('limite mensual')) {
+    return 'La IA no puede quitar el fondo por limite de uso de OpenAI. La foto queda sin cambios.';
+  }
+
+  return message || 'No pudimos quitar el fondo de la foto.';
+}
+
 export default function PublicarPage() {
   const router = useRouter();
   const { user, profile, loading } = useAuth();
+  const backgroundRemovalRequestId = useRef(0);
   const subscriptionExpired = profile?.rol === 'comercio' && isSubscriptionExpired(profile);
   const categoryOptions = publicationCategories;
   const [comercio, setComercio] = useState<Comercio | null>(null);
@@ -376,6 +419,10 @@ export default function PublicarPage() {
   const [descripcion, setDescripcion] = useState('');
   const [mediaFile, setMediaFile] = useState<File | null>(null);
   const [mediaKind, setMediaKind] = useState<MediaKind | null>(null);
+  const [originalMediaFile, setOriginalMediaFile] = useState<File | null>(null);
+  const [removeBackground, setRemoveBackground] = useState(false);
+  const [removingBackground, setRemovingBackground] = useState(false);
+  const [backgroundRemoved, setBackgroundRemoved] = useState(false);
   const [videoDuration, setVideoDuration] = useState<number | null>(null);
   const [aiSuggestion, setAiSuggestion] = useState<AiPublicationSuggestion | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -406,6 +453,47 @@ export default function PublicarPage() {
     };
   }, [previewUrl]);
 
+  const applyBackgroundRemoval = async (file: File) => {
+    const requestId = backgroundRemovalRequestId.current + 1;
+    backgroundRemovalRequestId.current = requestId;
+    setRemovingBackground(true);
+    setBackgroundRemoved(false);
+
+    try {
+      const cleanFile = await removeImageBackground(file);
+      if (backgroundRemovalRequestId.current !== requestId) return;
+      setMediaFile(cleanFile);
+      setBackgroundRemoved(true);
+    } catch (removeError) {
+      if (backgroundRemovalRequestId.current !== requestId) return;
+      setMediaFile(file);
+      setRemoveBackground(false);
+      setBackgroundRemoved(false);
+      setError(getBackgroundRemovalMessage(removeError));
+    } finally {
+      if (backgroundRemovalRequestId.current === requestId) {
+        setRemovingBackground(false);
+      }
+    }
+  };
+
+  const handleRemoveBackgroundChange = async (checked: boolean) => {
+    setError(null);
+    setAiSuggestion(null);
+    setRemoveBackground(checked);
+    setBackgroundRemoved(false);
+
+    if (!checked) {
+      backgroundRemovalRequestId.current += 1;
+      setRemovingBackground(false);
+      if (originalMediaFile) setMediaFile(originalMediaFile);
+      return;
+    }
+
+    if (mediaKind !== 'image' || !originalMediaFile) return;
+    await applyBackgroundRemoval(originalMediaFile);
+  };
+
   const handleAnalyze = async () => {
     setError(null);
     setAiSuggestion(null);
@@ -417,6 +505,11 @@ export default function PublicarPage() {
 
     if (!mediaFile || !mediaKind) {
       setError('Sube una foto o video para que la IA pueda analizarlo.');
+      return;
+    }
+
+    if (removingBackground) {
+      setError('Espera a que la IA termine de quitar el fondo.');
       return;
     }
 
@@ -462,10 +555,14 @@ export default function PublicarPage() {
     setError(null);
     setAiSuggestion(null);
     setVideoDuration(null);
+    setBackgroundRemoved(false);
+    backgroundRemovalRequestId.current += 1;
 
     if (!selectedFile) {
       setMediaFile(null);
       setMediaKind(null);
+      setOriginalMediaFile(null);
+      setRemoveBackground(false);
       return;
     }
 
@@ -476,15 +573,24 @@ export default function PublicarPage() {
         const preparedVideo = await preparePublicationVideo(selectedFile);
         setMediaFile(preparedVideo.file);
         setMediaKind('video');
+        setOriginalMediaFile(null);
+        setRemoveBackground(false);
         setVideoDuration(preparedVideo.duration);
       } else {
         const preparedFile = await preparePublicationImage(selectedFile);
         setMediaFile(preparedFile);
         setMediaKind('image');
+        setOriginalMediaFile(preparedFile);
+        if (removeBackground) {
+          await applyBackgroundRemoval(preparedFile);
+        }
       }
     } catch (mediaError) {
       setMediaFile(null);
       setMediaKind(null);
+      setOriginalMediaFile(null);
+      setRemoveBackground(false);
+      setBackgroundRemoved(false);
       setVideoDuration(null);
       event.target.value = '';
       setError(mediaError instanceof Error ? mediaError.message : 'No pudimos preparar este archivo.');
@@ -506,6 +612,12 @@ export default function PublicarPage() {
 
     if (!user) {
       setError('Debes iniciar sesion antes de publicar.');
+      setSubmitting(false);
+      return;
+    }
+
+    if (removingBackground) {
+      setError('Espera a que la IA termine de quitar el fondo.');
       setSubmitting(false);
       return;
     }
@@ -619,7 +731,15 @@ export default function PublicarPage() {
                 ) : previewUrl && mediaKind === 'video' ? (
                   <video src={previewUrl} className="max-h-72 w-full rounded-2xl bg-black object-contain" controls muted playsInline preload="metadata" />
                 ) : previewUrl ? (
-                  <img src={previewUrl} alt="Vista previa" className="max-h-72 w-full rounded-2xl object-cover" />
+                  <div className="relative w-full">
+                    <img src={previewUrl} alt="Vista previa" className={`max-h-72 w-full rounded-2xl object-cover transition ${removingBackground ? 'opacity-55' : ''}`} />
+                    {removingBackground ? (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center rounded-2xl bg-white/75 text-slate-700 backdrop-blur-sm">
+                        <Loader2 className="h-7 w-7 animate-spin" />
+                        <span className="mt-2 text-sm font-semibold">Quitando fondo...</span>
+                      </div>
+                    ) : null}
+                  </div>
                 ) : (
                   <>
                     <ImagePlus className="h-8 w-8 text-slate-400" />
@@ -636,16 +756,42 @@ export default function PublicarPage() {
                 />
               </label>
               {videoDuration ? <p className="mt-2 text-xs font-semibold text-slate-500">Video de {Math.round(videoDuration)} segundos</p> : null}
+              <label className={`mt-3 flex cursor-pointer items-start gap-3 rounded-2xl border p-3 transition ${removeBackground ? 'border-red-200 bg-red-50/70' : 'border-slate-200 bg-white hover:bg-slate-50'} ${mediaKind === 'video' ? 'cursor-not-allowed opacity-65' : ''}`}>
+                <input
+                  type="checkbox"
+                  checked={removeBackground}
+                  disabled={preparingMedia || removingBackground || mediaKind === 'video'}
+                  onChange={(event) => void handleRemoveBackgroundChange(event.target.checked)}
+                  className="mt-1 h-4 w-4 rounded border-slate-300 accent-accent disabled:cursor-not-allowed"
+                />
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-600">
+                  {removingBackground ? <Loader2 className="h-4 w-4 animate-spin" /> : <Scissors className="h-4 w-4" />}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-semibold text-slate-800">Quitar fondo con IA</span>
+                  <span className="mt-1 block text-xs leading-5 text-slate-500">
+                    {mediaKind === 'video'
+                      ? 'Disponible solo para fotos.'
+                      : removingBackground
+                        ? 'Preparando una imagen con fondo transparente.'
+                        : backgroundRemoved
+                          ? 'Fondo quitado. Esta version se usara para la revision y la publicacion.'
+                          : removeBackground && !originalMediaFile
+                            ? 'Cuando subas una foto, la IA quitara el fondo antes de analizarla.'
+                            : 'Ideal para publicar ropas y productos sobre fondo limpio.'}
+                  </span>
+                </span>
+              </label>
             </div>
 
             <button
               type="button"
               onClick={handleAnalyze}
-              disabled={analyzing || preparingMedia || !mediaFile}
+              disabled={analyzing || preparingMedia || removingBackground || !mediaFile}
               className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {analyzing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-              {analyzing ? 'Analizando...' : 'Generar texto con IA'}
+              {analyzing || removingBackground ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+              {removingBackground ? 'Quitando fondo...' : analyzing ? 'Analizando...' : 'Generar texto con IA'}
             </button>
 
             <div>
@@ -732,10 +878,10 @@ export default function PublicarPage() {
             <button
               type="submit"
               className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-accent px-5 py-4 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-70"
-              disabled={submitting || preparingMedia || reviewingMedia}
+              disabled={submitting || preparingMedia || reviewingMedia || removingBackground}
             >
-              {reviewingMedia || submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-              {reviewingMedia ? 'Revisando con IA...' : submitting ? 'Publicando...' : 'Publicar ahora'}
+              {reviewingMedia || submitting || removingBackground ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              {removingBackground ? 'Quitando fondo...' : reviewingMedia ? 'Revisando con IA...' : submitting ? 'Publicando...' : 'Publicar ahora'}
             </button>
           </form>
         </section>

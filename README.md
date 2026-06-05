@@ -77,12 +77,15 @@ Variables opcionales:
 NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=
 NEXT_PUBLIC_APP_URL=https://tu-dominio.com
 OPENAI_MODEL=gpt-5-mini
+OPENAI_IMAGE_MODEL=gpt-image-1.5
+OPENAI_IMAGE_QUALITY=medium
 ```
 
 Notas:
 
 - Las variables `NEXT_PUBLIC_*` se incluyen en el bundle del navegador durante `next build`; deben estar configuradas antes del deploy.
-- `OPENAI_API_KEY` queda solo del lado servidor y se usa en `POST /api/ai/publicacion` y `POST /api/ai/moderar-media`.
+- `OPENAI_API_KEY` queda solo del lado servidor y se usa en `POST /api/ai/publicacion`, `POST /api/ai/moderar-media` y `POST /api/ai/quitar-fondo`.
+- `OPENAI_IMAGE_MODEL` debe ser un modelo de imagen que soporte fondo transparente. `gpt-image-2` no lo soporta actualmente, por eso el default es `gpt-image-1.5`.
 - `NEXT_PUBLIC_APP_URL` mejora los enlaces compartidos de las fichas digitales. Si todavia no hay dominio final, puede completarse despues y redeployar.
 
 ## Firebase
