@@ -18,15 +18,11 @@ export function getPublicationHref(publicacion: Publicacion) {
 
 export function buildPublicationWhatsappMessage(publicacion: Publicacion, comercio?: CommerceContact, appOrigin = 'https://comerciospy.vercel.app') {
   const code = getPublicationCode(publicacion);
-  const mediaUrl = getPublicationMediaUrl(publicacion);
   const price = formatPrice(publicacion.precio);
-  const commerceName = comercio?.nombre ? ` de ${comercio.nombre}` : '';
   const lines = [
-    `Hola, vi el articulo #${code}${commerceName} en ComerciosPY y lo quiero.`,
-    `Articulo: ${publicacion.titulo}`,
+    `Hola, quiero consultar por ${publicacion.titulo} (#${code}).`,
     price ? `Precio: ${price}` : '',
-    mediaUrl ? `Foto: ${mediaUrl}` : '',
-    `Ficha: ${appOrigin}${getPublicationHref(publicacion)}`
+    `${appOrigin}${getPublicationHref(publicacion)}`
   ].filter(Boolean);
 
   return lines.join('\n');
