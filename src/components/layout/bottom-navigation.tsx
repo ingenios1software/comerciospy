@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { CreditCard, Heart, Home, List, LogOut, PlusCircle, ShoppingCart, Store, User, Users } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/firebase/auth-context';
+import { useCart } from '@/lib/cart';
 
 type NavigationItem = {
   label: string;
@@ -13,8 +14,11 @@ type NavigationItem = {
 
 export function BottomNavigation() {
   const { user, profile, loading, logout } = useAuth();
+  const { items: cartItems } = useCart();
   const router = useRouter();
   const pathname = usePathname();
+  const cartCount = cartItems.length;
+  const cartCountLabel = cartCount > 99 ? '99+' : String(cartCount);
 
   const handleLogout = async () => {
     await logout();
@@ -69,7 +73,16 @@ export function BottomNavigation() {
                 active ? 'bg-slate-950 text-white shadow-soft' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950'
               }`}
             >
-              <Icon className="h-4 w-4" />
+              <span className="relative">
+                <Icon className="h-4 w-4" />
+                {item.href === '/carrito' && cartCount > 0 ? (
+                  <span className={`absolute -right-2.5 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-black leading-none ring-1 ${
+                    active ? 'bg-white text-slate-950 ring-white' : 'bg-accent text-white ring-red-100'
+                  }`}>
+                    {cartCountLabel}
+                  </span>
+                ) : null}
+              </span>
               <span className="truncate">{item.label}</span>
             </Link>
           );

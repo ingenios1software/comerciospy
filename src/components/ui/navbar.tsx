@@ -5,14 +5,18 @@ import { FormEvent, useState } from 'react';
 import { LogOut, MessageCircle, Search, ShoppingCart } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/firebase/auth-context';
+import { useCart } from '@/lib/cart';
 import { ShareAppButton } from './share-app-button';
 import { developerBrand } from '@/lib/brand';
 
 export function Navbar() {
   const { user, loading, logout } = useAuth();
+  const { items: cartItems } = useCart();
   const router = useRouter();
   const pathname = usePathname();
   const [searchValue, setSearchValue] = useState('');
+  const cartCount = cartItems.length;
+  const cartCountLabel = cartCount > 99 ? '99+' : String(cartCount);
 
   const handleLogout = async () => {
     await logout();
@@ -96,8 +100,13 @@ export function Navbar() {
                   <MessageCircle className="h-3.5 w-3.5" />
                   Quiero aparecer
                 </Link>
-                <Link href="/carrito" className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-white/15 text-white transition hover:bg-white/25" aria-label="Abrir carrito">
+                <Link href="/carrito" className="relative inline-flex h-8 w-8 items-center justify-center rounded-md bg-white/15 text-white transition hover:bg-white/25" aria-label="Abrir carrito">
                   <ShoppingCart className="h-3.5 w-3.5" />
+                  {cartCount > 0 ? (
+                    <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-white px-1 text-[9px] font-black leading-none text-accent ring-1 ring-red-100">
+                      {cartCountLabel}
+                    </span>
+                  ) : null}
                 </Link>
               </>
             )}
@@ -117,7 +126,14 @@ export function Navbar() {
                     : 'text-red-50 hover:text-white'
                 }`}
               >
-                {item.label}
+                <span className="inline-flex items-center gap-1">
+                  {item.label}
+                  {item.href === '/carrito' && cartCount > 0 ? (
+                    <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-white px-1 text-[9px] font-black leading-none text-accent ring-1 ring-red-100">
+                      {cartCountLabel}
+                    </span>
+                  ) : null}
+                </span>
               </Link>
             ))}
           </div>
