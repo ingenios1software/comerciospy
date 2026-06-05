@@ -52,6 +52,10 @@ export default function FavoritosPage() {
       .map((favorite) => publicacionesById.get(favorite.id))
       .filter((publicacion): publicacion is Publicacion => Boolean(publicacion));
   }, [favorites, publicacionesById]);
+  const favoritePublicationPreviewItems = useMemo(
+    () => favoritePublicaciones.map((publicacion) => ({ publicacion, comercio: comerciosById.get(publicacion.comercioId) })),
+    [comerciosById, favoritePublicaciones]
+  );
 
   const missingFavorites = favorites.filter((favorite) => {
     return favorite.kind === 'comercio' ? !comerciosById.has(favorite.id) : !publicacionesById.has(favorite.id);
@@ -97,12 +101,13 @@ export default function FavoritosPage() {
               <section className="space-y-2">
                 <h2 className="text-base font-semibold text-slate-950">Articulos favoritos</h2>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
-                  {favoritePublicaciones.map((publicacion) => (
+                  {favoritePublicationPreviewItems.map(({ publicacion, comercio }) => (
                     <PublicacionCard
                       key={publicacion.id}
                       publicacion={publicacion}
-                      comercio={comerciosById.get(publicacion.comercioId)}
+                      comercio={comercio}
                       variant="compact"
+                      previewItems={favoritePublicationPreviewItems}
                     />
                   ))}
                 </div>

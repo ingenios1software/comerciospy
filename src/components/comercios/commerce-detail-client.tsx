@@ -122,6 +122,11 @@ export function CommerceDetailClient({ commerceId, initialComercio, initialPubli
     return publicaciones.filter((publicacion) => publicacion.categoria === selectedPublicationCategory);
   }, [publicaciones, selectedPublicationCategory]);
 
+  const visiblePublicationPreviewItems = useMemo(
+    () => visiblePublicaciones.map((publicacion) => ({ publicacion, comercio })),
+    [comercio, visiblePublicaciones]
+  );
+
   if (loading) {
     return (
       <main className="min-h-screen bg-surface px-4 pb-28 pt-24 text-slate-950 sm:px-6">
@@ -274,7 +279,15 @@ export function CommerceDetailClient({ commerceId, initialComercio, initialPubli
           ) : null}
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {visiblePublicaciones.length > 0 ? (
-              visiblePublicaciones.map((publicacion) => <PublicacionCard key={publicacion.id} publicacion={publicacion} comercio={comercio} variant="compact" />)
+              visiblePublicationPreviewItems.map(({ publicacion }) => (
+                <PublicacionCard
+                  key={publicacion.id}
+                  publicacion={publicacion}
+                  comercio={comercio}
+                  variant="compact"
+                  previewItems={visiblePublicationPreviewItems}
+                />
+              ))
             ) : (
               <div className="col-span-2 rounded-2xl border border-slate-200 bg-white p-4 text-center text-sm text-slate-500 shadow-soft sm:col-span-3 lg:col-span-4 xl:col-span-5">{publicaciones.length > 0 ? 'No hay publicaciones en esta categoria.' : 'No hay publicaciones para este comercio aun.'}</div>
             )}

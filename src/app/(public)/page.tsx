@@ -95,6 +95,12 @@ export default function Home() {
     });
   }, [comerciosById, publicaciones, searchValue, selectedCategory, selectedCategoryGroup, selectedCity]);
 
+  const recentPublicaciones = useMemo(() => visiblePublicaciones.slice(0, 12), [visiblePublicaciones]);
+  const recentPublicationPreviewItems = useMemo(
+    () => recentPublicaciones.map((publicacion) => ({ publicacion, comercio: comerciosById.get(publicacion.comercioId) })),
+    [comerciosById, recentPublicaciones]
+  );
+
   const cityOptions = useMemo(() => getCityOptions(comercios), [comercios]);
   const categoryOptions = useMemo(() => getCategoriesForGroup(selectedCategoryGroup), [selectedCategoryGroup]);
 
@@ -254,9 +260,15 @@ export default function Home() {
             {loadingPublicaciones ? (
               <p className="col-span-2 rounded-md border border-slate-200 bg-white p-3 text-[12px] font-semibold text-slate-500 shadow-sm sm:col-span-3 lg:col-span-4 xl:col-span-6">Cargando publicaciones...</p>
             ) : visiblePublicaciones.length > 0 ? (
-              visiblePublicaciones
-                .slice(0, 12)
-                .map((publicacion) => <PublicacionCard key={publicacion.id} publicacion={publicacion} comercio={comerciosById.get(publicacion.comercioId)} variant="compact" />)
+              recentPublicationPreviewItems.map(({ publicacion, comercio }) => (
+                <PublicacionCard
+                  key={publicacion.id}
+                  publicacion={publicacion}
+                  comercio={comercio}
+                  variant="compact"
+                  previewItems={recentPublicationPreviewItems}
+                />
+              ))
             ) : (
               <p className="col-span-2 rounded-md border border-slate-200 bg-white p-3 text-[12px] font-semibold text-slate-500 shadow-sm sm:col-span-3 lg:col-span-4 xl:col-span-6">No hay publicaciones recientes.</p>
             )}

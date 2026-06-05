@@ -1,10 +1,10 @@
 "use client";
 
 import { BadgePercent, CheckCircle2, MessageCircle } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { CartButton } from '@/components/cart/cart-button';
 import { FavoriteButton } from '@/components/favorites/favorite-button';
-import { PublicacionPreviewModal } from '@/components/publicaciones/publicacion-preview-modal';
+import { PublicacionPreviewModal, type PublicationPreviewItem } from '@/components/publicaciones/publicacion-preview-modal';
 import { likePublication } from '@/lib/publication-engagement';
 import type { Comercio, Publicacion } from '@/types';
 import { buildWhatsappUrl, formatPrice } from '@/lib/utils/format';
@@ -16,10 +16,11 @@ type PublicacionCardProps = {
   onMarkSold?: (publicacion: Publicacion) => void | Promise<void>;
   markingSold?: boolean;
   variant?: 'default' | 'compact';
+  previewItems?: PublicationPreviewItem[];
 };
 
-export function PublicacionCard({ publicacion, comercio, onMarkSold, markingSold = false, variant = 'default' }: PublicacionCardProps) {
-  const [previewOpen, setPreviewOpen] = useState(false);
+export function PublicacionCard({ publicacion, comercio, onMarkSold, markingSold = false, variant = 'default', previewItems }: PublicacionCardProps) {
+  const [activePreviewIndex, setActivePreviewIndex] = useState<number | null>(null);
   const mediaUrl = getPublicationMediaUrl(publicacion);
   const isVideo = publicacion.mediaType === 'video' && Boolean(mediaUrl);
   const compact = variant === 'compact';
@@ -43,6 +44,15 @@ export function PublicacionCard({ publicacion, comercio, onMarkSold, markingSold
     whatsapp: comercio?.whatsapp,
     telefono: comercio?.telefono
   };
+  const modalPreviewItems = useMemo<PublicationPreviewItem[]>(
+    () => (previewItems?.length ? previewItems : [{ publicacion, comercio }]),
+    [comercio, previewItems, publicacion]
+  );
+  const openPreview = () => {
+    const itemIndex = modalPreviewItems.findIndex((item) => item.publicacion.id === publicacion.id);
+    setActivePreviewIndex(itemIndex >= 0 ? itemIndex : 0);
+  };
+
   return (
     <>
       <article className={`overflow-hidden border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-soft ${compact ? 'rounded-md' : 'rounded-2xl'}`}>
@@ -50,7 +60,7 @@ export function PublicacionCard({ publicacion, comercio, onMarkSold, markingSold
           {isVideo ? (
             <button
               type="button"
-              onClick={() => setPreviewOpen(true)}
+              onClick={openPreview}
               className="group h-full w-full focus:outline-none focus:ring-2 focus:ring-accent focus:ring-inset"
               aria-label={`Ver video de ${publicacion.titulo}`}
             >
@@ -59,7 +69,7 @@ export function PublicacionCard({ publicacion, comercio, onMarkSold, markingSold
           ) : mediaUrl ? (
             <button
               type="button"
-              onClick={() => setPreviewOpen(true)}
+              onClick={openPreview}
               className="group h-full w-full focus:outline-none focus:ring-2 focus:ring-accent focus:ring-inset"
               aria-label={`Ver publicacion de ${publicacion.titulo}`}
             >
@@ -128,7 +138,16 @@ export function PublicacionCard({ publicacion, comercio, onMarkSold, markingSold
           ) : null}
         </div>
       </article>
-      {previewOpen ? <PublicacionPreviewModal publicacion={publicacion} comercio={comercio} onClose={() => setPreviewOpen(false)} /> : null}
+      {activePreviewIndex !== null ? (
+        <PublicacionPreviewModal
+          publicacion={publicacion}
+          comercio={comercio}
+          items={modalPreviewItems}
+          activeIndex={activePreviewIndex}
+          onChange={setActivePreviewIndex}
+          onClose={() => setActivePreviewIndex(null)}
+        />
+      ) : null}
     </>
   );
 }

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { Edit3, PlusCircle, Sparkles, Store } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Sidebar } from '@/components/layout/sidebar';
 import { DigitalBusinessCard } from '@/components/comercios/digital-business-card';
 import { RenewalNotice } from '@/components/subscription/renewal-notice';
@@ -20,6 +20,10 @@ export default function DashboardPage() {
   const [markingSoldId, setMarkingSoldId] = useState<string | null>(null);
   const [actionError, setActionError] = useState('');
   const subscriptionExpired = profile?.rol === 'comercio' && isSubscriptionExpired(profile);
+  const publicationPreviewItems = useMemo(
+    () => publicaciones.map((publicacion) => ({ publicacion, comercio })),
+    [comercio, publicaciones]
+  );
 
   useEffect(() => {
     const loadData = async () => {
@@ -179,6 +183,7 @@ export default function DashboardPage() {
                       comercio={comercio}
                       onMarkSold={handleMarkSold}
                       markingSold={markingSoldId === publicacion.id}
+                      previewItems={publicationPreviewItems}
                     />
                   ))
                 ) : (
