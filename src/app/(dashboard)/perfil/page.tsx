@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ExternalLink, ImagePlus, Loader2, MapPin, Navigation, Save, Search } from 'lucide-react';
+import { Building2, Check, Clipboard, ExternalLink, ImagePlus, Loader2, MapPin, Navigation, Save, Search } from 'lucide-react';
 import { Sidebar } from '@/components/layout/sidebar';
 import { ImageLightbox, type LightboxImage } from '@/components/ui/image-lightbox';
 import { RenewalNotice } from '@/components/subscription/renewal-notice';
@@ -11,6 +11,7 @@ import { getComercioById, updateCommerce } from '@/lib/firebase/firestore';
 import { uploadFile } from '@/lib/firebase/storage';
 import { categories } from '@/lib/categories';
 import { isSubscriptionExpired } from '@/lib/subscription';
+import { buildPublicCommerceUrl } from '@/lib/utils/format';
 import type { Comercio } from '@/types';
 
 const requiredProfileFields: Array<{ label: string; value: (data: ProfileFormData) => string }> = [
@@ -125,6 +126,8 @@ function buildGoogleBusinessSearchUrl(data: Pick<ProfileFormData, 'nombre' | 'di
   return query ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}` : 'https://www.google.com/maps';
 }
 
+const googleBusinessProfileUrl = 'https://business.google.com/add';
+
 function getGeolocationErrorMessage(error: GeolocationPositionError) {
   if (error.code === error.PERMISSION_DENIED) {
     return 'El celular no dio permiso para usar la ubicacion. Activa el permiso del navegador e intenta de nuevo.';
@@ -191,6 +194,7 @@ export default function PerfilPage() {
   const [success, setSuccess] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [locating, setLocating] = useState(false);
+  const [copiedGoogleField, setCopiedGoogleField] = useState('');
 
   const comercioId = profile?.comercioId ?? user?.uid;
   const photoLightboxItems = useMemo<LightboxImage[]>(
@@ -254,6 +258,23 @@ export default function PerfilPage() {
 
     return '';
   }, [ubicacionLat, ubicacionLng, ubicacionUrl]);
+
+  const publicCommerceUrl = useMemo(() => (comercioId ? buildPublicCommerceUrl(comercioId) : ''), [comercioId]);
+
+  const googleBusinessProfileFields = useMemo(
+    () =>
+      [
+        { id: 'nombre', label: 'Nombre', value: clean(nombre) },
+        { id: 'categoria', label: 'Categoria sugerida', value: clean(rubro || categoria) },
+        { id: 'direccion', label: 'Direccion', value: [clean(direccion), clean(ciudad)].filter(Boolean).join(', ') },
+        { id: 'telefono', label: 'Telefono', value: clean(telefono || whatsapp) },
+        { id: 'horario', label: 'Horario', value: clean(horario) },
+        { id: 'sitio', label: 'Sitio web', value: publicCommerceUrl },
+        { id: 'ubicacion', label: 'Link de Maps', value: currentLocationUrl },
+        { id: 'descripcion', label: 'Descripcion', value: clean(resumen || descripcion) }
+      ].filter((field) => field.value),
+    [categoria, ciudad, currentLocationUrl, descripcion, direccion, horario, nombre, publicCommerceUrl, resumen, rubro, telefono, whatsapp]
+  );
 
   const syncCoordinates = (lat: number, lng: number, options?: { updateUrl?: boolean }) => {
     setUbicacionLat(formatCoordinate(lat));
@@ -321,6 +342,18 @@ export default function PerfilPage() {
     setUbicacionLat('');
     setUbicacionLng('');
     setUbicacionUrl('');
+  };
+
+  const handleCopyGoogleField = async (fieldId: string, value: string) => {
+    setError(null);
+
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopiedGoogleField(fieldId);
+      window.setTimeout(() => setCopiedGoogleField((current) => (current === fieldId ? '' : current)), 1600);
+    } catch {
+      setError('No se pudo copiar el dato. Seleccionalo manualmente e intenta de nuevo.');
+    }
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -577,6 +610,46 @@ export default function PerfilPage() {
                       Limpiar ubicacion
                     </button>
                   </div>
+                </div>
+              </div>
+
+              <div className="border-t border-slate-200 pt-5">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <Building2 className="h-4 w-4 text-accent" />
+                      <p className="text-sm font-semibold text-slate-950">Google Business Profile</p>
+                    </div>
+                    <p className="mt-1 text-xs leading-5 text-slate-500">Datos listos para crear o reclamar la ficha del negocio en Google.</p>
+                  </div>
+                  <a
+                    href={googleBusinessProfileUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                    Publicar en Google Maps
+                  </a>
+                </div>
+
+                <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                  {googleBusinessProfileFields.map((field) => (
+                    <div key={field.id} className="flex min-h-14 min-w-0 items-center justify-between gap-3 rounded-xl bg-slate-50 px-3 py-2 ring-1 ring-slate-200">
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-bold uppercase text-slate-500">{field.label}</p>
+                        <p className="mt-0.5 truncate text-sm font-semibold text-slate-950">{field.value}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleCopyGoogleField(field.id, field.value)}
+                        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-slate-600 ring-1 ring-slate-200 transition hover:bg-slate-100 hover:text-slate-950"
+                        aria-label={`Copiar ${field.label}`}
+                      >
+                        {copiedGoogleField === field.id ? <Check className="h-4 w-4 text-emerald-600" /> : <Clipboard className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  ))}
                 </div>
               </div>
 
