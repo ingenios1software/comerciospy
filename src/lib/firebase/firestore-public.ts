@@ -157,5 +157,7 @@ export async function getPublicPublicationsByCommerce(comercioId: string): Promi
     }
   });
 
-  return publicaciones.sort((a, b) => new Date(b.creadoEn).getTime() - new Date(a.creadoEn).getTime());
+  return publicaciones
+    .filter((publicacion) => publicacion.moderacionEstado !== 'pending' && publicacion.moderacionEstado !== 'rejected')
+    .sort((a, b) => new Date(b.creadoEn).getTime() - new Date(a.creadoEn).getTime());
 }

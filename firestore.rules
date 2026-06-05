@@ -13,6 +13,29 @@ service cloud.firestore {
       return isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.rol in ['admin', 'superadmin'];
     }
 
+    function isPublicCommerce() {
+      return resource.data.activo == true
+        && (!('visibilidadEstado' in resource.data) || resource.data.visibilidadEstado == 'publicado');
+    }
+
+    function isMetricOnlyCommerceUpdate() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['metricas'])
+        && ('metricas' in request.resource.data)
+        && request.resource.data.metricas.keys().hasOnly([
+          'visitasFicha',
+          'clicsWhatsapp',
+          'clicsLlamar',
+          'clicsMapa',
+          'favoritos',
+          'compartidos'
+        ]);
+    }
+
+    function isPublicPublication() {
+      return resource.data.activo == true
+        && (!('moderacionEstado' in resource.data) || resource.data.moderacionEstado == 'approved');
+    }
+
     function isComercioOwner(comercioId) {
       return isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.comercioId == comercioId && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.rol == 'comercio';
     }
@@ -41,23 +64,24 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow get: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
-      allow list: if isAuthenticated() && isAdmin();
-      allow create: if isValidOwnProfileCreate(userId) || isAdmin();
-      allow update: if isSafeOwnProfileUpdate(userId) || isAdmin();
-      allow delete: if isAuthenticated() && isAdmin();
+      allow get: if isAuthenticated() && (request.auth.uid == userId || isSuperAdmin());
+      allow list: if isAuthenticated() && isSuperAdmin();
+      allow create: if isValidOwnProfileCreate(userId) || isSuperAdmin();
+      allow update: if isSafeOwnProfileUpdate(userId) || isSuperAdmin();
+      allow delete: if isAuthenticated() && isSuperAdmin();
     }
 
     match /comercios/{comercioId} {
-      allow read: if resource.data.activo == true || isComercioOwner(comercioId) || isAdmin();
+      allow read: if isPublicCommerce() || isComercioOwner(comercioId) || isSuperAdmin();
       allow create: if (isComercioOwner(comercioId) && hasUsableSubscription(request.auth.uid)) || isSuperAdmin();
-      allow update, delete: if (isComercioOwner(comercioId) && hasUsableSubscription(request.auth.uid)) || isAdmin();
+      allow update: if isMetricOnlyCommerceUpdate() || (isComercioOwner(comercioId) && hasUsableSubscription(request.auth.uid)) || isSuperAdmin();
+      allow delete: if (isComercioOwner(comercioId) && hasUsableSubscription(request.auth.uid)) || isSuperAdmin();
     }
 
     match /publicaciones/{publicacionId} {
-      allow read: if resource.data.activo == true;
+      allow read: if isPublicPublication() || isComercioOwner(resource.data.comercioId) || isSuperAdmin();
       allow create: if (isComercioOwner(request.resource.data.comercioId) && hasUsableSubscription(request.auth.uid)) || isSuperAdmin();
-      allow update, delete: if (isComercioOwner(resource.data.comercioId) && hasUsableSubscription(request.auth.uid)) || isAdmin();
+      allow update, delete: if (isComercioOwner(resource.data.comercioId) && hasUsableSubscription(request.auth.uid)) || isSuperAdmin();
     }
 
     match /categorias/{categoriaId} {
@@ -66,8 +90,8 @@ service cloud.firestore {
     }
 
     match /planes/{planId} {
-      allow read: if resource.data.activo == true || isAdmin();
-      allow create, update, delete: if isAdmin();
+      allow read: if resource.data.activo == true || isSuperAdmin();
+      allow create, update, delete: if isSuperAdmin();
     }
   }
 }

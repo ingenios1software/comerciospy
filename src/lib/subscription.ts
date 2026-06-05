@@ -36,7 +36,12 @@ export function isSubscriptionExpiringSoon(subscription?: SubscriptionSubject | 
 }
 
 export function isCommercePubliclyVisible(comercio?: Comercio | null) {
-  return Boolean(comercio?.activo) && !isSubscriptionExpired(comercio);
+  if (!comercio || isSubscriptionExpired(comercio)) return false;
+  if (comercio.visibilidadEstado) {
+    return comercio.visibilidadEstado === 'publicado' && comercio.activo !== false;
+  }
+
+  return Boolean(comercio.activo);
 }
 
 export function getSubscriptionRenewalText(subscription?: SubscriptionSubject | null) {

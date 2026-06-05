@@ -1,8 +1,9 @@
-import { collection, deleteField, doc, getDoc, getDocs, getFirestore, query, setDoc, updateDoc, where } from 'firebase/firestore';
+import { collection, deleteField, doc, getDoc, getDocs, getFirestore, increment, query, setDoc, updateDoc, where } from 'firebase/firestore';
 import { getFirebaseApp } from './firebase';
 import { isCommercePubliclyVisible } from '@/lib/subscription';
 import { defaultPlans, sortPlans } from '@/lib/plans';
 import type { Categoria, Comercio, PlanComercial, Publicacion, UsuarioApp } from '@/types';
+import type { CommerceMetrics } from '@/types';
 
 function getFirestoreInstance() {
   return getFirestore(getFirebaseApp());
@@ -38,6 +39,10 @@ export async function getAllUsers(): Promise<UsuarioApp[]> {
   return querySnapshot.docs.map((docItem) => docItem.data() as UsuarioApp);
 }
 
+export async function updateUserProfile(id: string, user: Partial<UsuarioApp>) {
+  return setDoc(usersCollection(id), user, { merge: true });
+}
+
 export async function createPublication(publicacion: Publicacion) {
   return setDoc(publicacionesCollection(publicacion.id), publicacion);
 }
@@ -54,12 +59,17 @@ export async function markPublicationAsSold(id: string) {
   });
 }
 
+function isPublicationPubliclyVisible(publicacion: Publicacion) {
+  return publicacion.moderacionEstado !== 'pending' && publicacion.moderacionEstado !== 'rejected';
+}
+
 export async function getLatestPublications(limit = 10): Promise<Publicacion[]> {
   const [querySnapshot, comercios] = await Promise.all([getDocs(activePublicacionesQuery()), getAllComercios()]);
   const visibleCommerceIds = new Set(comercios.map((comercio) => comercio.id));
 
   return querySnapshot.docs
     .map((docItem) => docItem.data() as Publicacion)
+    .filter(isPublicationPubliclyVisible)
     .filter((publicacion) => visibleCommerceIds.has(publicacion.comercioId))
     .slice(0, limit);
 }
@@ -70,7 +80,13 @@ export async function getAllPublications(): Promise<Publicacion[]> {
 
   return querySnapshot.docs
     .map((docItem) => docItem.data() as Publicacion)
+    .filter(isPublicationPubliclyVisible)
     .filter((publicacion) => visibleCommerceIds.has(publicacion.comercioId));
+}
+
+export async function getAllPublicationsForAdmin(): Promise<Publicacion[]> {
+  const querySnapshot = await getDocs(publicacionesCollectionRef());
+  return querySnapshot.docs.map((docItem) => docItem.data() as Publicacion);
 }
 
 export async function getPublicationsByCommerce(comercioId: string): Promise<Publicacion[]> {
@@ -80,7 +96,7 @@ export async function getPublicationsByCommerce(comercioId: string): Promise<Pub
     where('activo', '==', true)
   );
   const querySnapshot = await getDocs(publicacionesQuery);
-  return querySnapshot.docs.map((docItem) => docItem.data() as Publicacion);
+  return querySnapshot.docs.map((docItem) => docItem.data() as Publicacion).filter(isPublicationPubliclyVisible);
 }
 
 export async function getAllComercios(): Promise<Comercio[]> {
@@ -104,6 +120,12 @@ export async function createCommerce(comercio: Comercio) {
 
 export async function updateCommerce(id: string, comercio: Partial<Comercio>) {
   return setDoc(comerciosCollection(id), comercio, { merge: true });
+}
+
+export async function trackCommerceMetric(id: string, metric: keyof CommerceMetrics) {
+  return updateDoc(comerciosCollection(id), {
+    [`metricas.${metric}`]: increment(1)
+  }).catch(() => undefined);
 }
 
 export async function removeCommerceSubscriptionFields(id: string) {

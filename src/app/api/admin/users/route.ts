@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createFirestoreDocument, deleteFirestoreDocument, getFirestoreDocument, updateFirestoreDocument } from '@/lib/firebase/firestore-rest';
 import { getSubscriptionVenceAt } from '@/lib/subscription';
-import type { Comercio, SubscriptionStatus, UserRole, UsuarioApp } from '@/types';
+import type { Comercio, CommerceVisibilityStatus, PaymentStatus, SubscriptionStatus, UserRole, UsuarioApp } from '@/types';
 
 export const runtime = 'nodejs';
 
 const creatableRoles: UserRole[] = ['admin', 'comercio', 'usuario', 'cliente'];
 const subscriptionStatuses: SubscriptionStatus[] = ['trial', 'active', 'past_due', 'expired', 'cancelled'];
+const paymentStatuses: PaymentStatus[] = ['pending', 'paid', 'overdue', 'cancelled'];
+const visibilityStatuses: CommerceVisibilityStatus[] = ['publicado', 'oculto', 'pendiente', 'suspendido'];
 
 type CreateUserBody = {
   email?: string;
@@ -24,6 +26,10 @@ type SubscriptionInput = {
   venceEn?: string;
   montoMensual?: number;
   moneda?: string;
+  estadoPago?: PaymentStatus;
+  metodoPago?: string;
+  observacion?: string;
+  comprobanteUrl?: string;
 };
 
 type UpdateUserBody = {
@@ -57,7 +63,11 @@ function buildSubscriptionData({
   suscripcionInicio,
   suscripcionVenceEn,
   montoMensual,
-  moneda
+  moneda,
+  estadoPago,
+  metodoPago,
+  observacionCobranza,
+  comprobanteUrl
 }: {
   planNombre: string;
   suscripcionEstado: SubscriptionStatus;
@@ -65,6 +75,10 @@ function buildSubscriptionData({
   suscripcionVenceEn: string;
   montoMensual: number;
   moneda: string;
+  estadoPago: PaymentStatus;
+  metodoPago: string;
+  observacionCobranza: string;
+  comprobanteUrl: string;
 }) {
   return {
     planNombre,
@@ -73,7 +87,12 @@ function buildSubscriptionData({
     suscripcionVenceEn,
     suscripcionVenceAt: getSubscriptionVenceAt(suscripcionVenceEn),
     montoMensual: Number.isFinite(montoMensual) ? montoMensual : 0,
-    moneda
+    moneda,
+    estadoPago,
+    metodoPago,
+    observacionCobranza,
+    comprobanteUrl,
+    pagoActualizadoEn: new Date().toISOString()
   };
 }
 
@@ -186,6 +205,10 @@ export async function POST(request: NextRequest) {
     : 'active';
   const montoMensual = Number(suscripcion.montoMensual ?? 0);
   const moneda = clean(suscripcion.moneda) || 'PYG';
+  const estadoPago = paymentStatuses.includes(suscripcion.estadoPago ?? 'pending') ? suscripcion.estadoPago ?? 'pending' : 'pending';
+  const metodoPago = clean(suscripcion.metodoPago);
+  const observacionCobranza = clean(suscripcion.observacion);
+  const comprobanteUrl = clean(suscripcion.comprobanteUrl);
 
   if (!email || !email.includes('@')) {
     return jsonError('Ingresa un email valido.', 400);
@@ -220,6 +243,7 @@ export async function POST(request: NextRequest) {
   const resumen = clean(comercio.resumen);
   const ubicacionUrl = clean(comercio.ubicacionUrl);
   const activo = typeof comercio.activo === 'boolean' ? comercio.activo : false;
+  const visibilidadEstado = visibilityStatuses.includes(comercio.visibilidadEstado ?? 'pendiente') ? comercio.visibilidadEstado ?? 'pendiente' : 'pendiente';
 
   if (rol === 'comercio' && (!comercioNombre || !rubro || !ciudad || !whatsapp)) {
     return jsonError('Completa nombre del comercio, rubro, ciudad y WhatsApp.', 400);
@@ -232,7 +256,11 @@ export async function POST(request: NextRequest) {
     suscripcionInicio: suscripcionInicio || createdAt.slice(0, 10),
     suscripcionVenceEn,
     montoMensual,
-    moneda
+    moneda,
+    estadoPago,
+    metodoPago,
+    observacionCobranza,
+    comprobanteUrl
   });
   let createdAuthUser: Awaited<ReturnType<typeof createAuthUser>>;
 
@@ -278,6 +306,7 @@ export async function POST(request: NextRequest) {
           servicios: [],
           horario,
           ubicacionUrl,
+          visibilidadEstado,
           ubicacion: {
             lat: 0,
             lng: 0
@@ -350,6 +379,10 @@ export async function PATCH(request: NextRequest) {
     : 'active';
   const montoMensual = Number(suscripcion.montoMensual ?? 0);
   const moneda = clean(suscripcion.moneda) || 'PYG';
+  const estadoPago = paymentStatuses.includes(suscripcion.estadoPago ?? 'pending') ? suscripcion.estadoPago ?? 'pending' : 'pending';
+  const metodoPago = clean(suscripcion.metodoPago);
+  const observacionCobranza = clean(suscripcion.observacion);
+  const comprobanteUrl = clean(suscripcion.comprobanteUrl);
 
   if (!id) {
     return jsonError('Selecciona un usuario para actualizar.', 400);
@@ -378,6 +411,7 @@ export async function PATCH(request: NextRequest) {
   const horario = clean(comercio.horario);
   const descripcion = clean(comercio.descripcion);
   const activo = typeof comercio.activo === 'boolean' ? comercio.activo : false;
+  const visibilidadEstado = visibilityStatuses.includes(comercio.visibilidadEstado ?? 'pendiente') ? comercio.visibilidadEstado ?? 'pendiente' : 'pendiente';
 
   if (rol === 'comercio' && (!comercioNombre || !rubro || !ciudad || !whatsapp)) {
     return jsonError('Completa nombre del comercio, rubro, ciudad y WhatsApp.', 400);
@@ -395,7 +429,11 @@ export async function PATCH(request: NextRequest) {
             suscripcionInicio,
             suscripcionVenceEn,
             montoMensual,
-            moneda
+            moneda,
+            estadoPago,
+            metodoPago,
+            observacionCobranza,
+            comprobanteUrl
           })
         }
       : {})
@@ -416,7 +454,8 @@ export async function PATCH(request: NextRequest) {
           telefono,
           whatsapp,
           horario,
-          activo
+          activo,
+          visibilidadEstado
         }
       : null;
 

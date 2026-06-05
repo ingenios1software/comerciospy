@@ -8,9 +8,10 @@ type FavoriteButtonProps = {
   label?: string;
   compact?: boolean;
   className?: string;
+  onFavoriteAdded?: () => void;
 };
 
-export function FavoriteButton({ item, label = 'Me gusta', compact = false, className = '' }: FavoriteButtonProps) {
+export function FavoriteButton({ item, label = 'Me gusta', compact = false, className = '', onFavoriteAdded }: FavoriteButtonProps) {
   const { isFavorite, toggle } = useFavorites();
   const active = isFavorite(item.kind, item.id);
 
@@ -20,7 +21,8 @@ export function FavoriteButton({ item, label = 'Me gusta', compact = false, clas
       onClick={(event) => {
         event.preventDefault();
         event.stopPropagation();
-        toggle(item);
+        const added = toggle(item);
+        if (added) onFavoriteAdded?.();
       }}
       aria-pressed={active}
       aria-label={active ? `Quitar de favoritos: ${item.title}` : `Guardar favorito: ${item.title}`}

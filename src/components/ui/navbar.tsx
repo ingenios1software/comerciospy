@@ -10,7 +10,7 @@ import { ShareAppButton } from './share-app-button';
 import { developerBrand } from '@/lib/brand';
 
 export function Navbar() {
-  const { user, loading, logout } = useAuth();
+  const { user, profile, loading, logout } = useAuth();
   const { items: cartItems } = useCart();
   const router = useRouter();
   const pathname = usePathname();
@@ -32,7 +32,14 @@ export function Navbar() {
   const navItems = loading
     ? []
     : user
-    ? [
+    ? profile?.rol === 'superadmin'
+      ? [
+          { label: 'Inicio', href: '/' },
+          { label: 'Guia', href: '/comercios' },
+          { label: 'Carrito', href: '/carrito' },
+          { label: 'Panel', href: '/admin' }
+        ]
+      : [
         { label: 'Inicio', href: '/' },
         { label: 'Guia', href: '/comercios' },
         { label: 'Favoritos', href: '/favoritos' },

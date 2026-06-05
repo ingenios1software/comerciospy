@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { Clock, MapPin, MessageCircle, Phone, ShieldCheck } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { getComercioById, getPublicationsByCommerce } from '@/lib/firebase/firestore';
+import { getComercioById, getPublicationsByCommerce, trackCommerceMetric } from '@/lib/firebase/firestore';
 import { PublicacionCard } from '@/components/publicaciones/publicacion-card';
 import { DigitalBusinessCard } from '@/components/comercios/digital-business-card';
 import { ImageLightbox, type LightboxImage } from '@/components/ui/image-lightbox';
@@ -111,6 +111,12 @@ export function CommerceDetailClient({ commerceId, initialComercio, initialPubli
     }
   }, [publicationCategoryOptions, selectedPublicationCategory]);
 
+  useEffect(() => {
+    if (comercio?.id) {
+      void trackCommerceMetric(comercio.id, 'visitasFicha');
+    }
+  }, [comercio?.id]);
+
   const visiblePublicaciones = useMemo(() => {
     if (selectedPublicationCategory === 'Todos') return publicaciones;
     return publicaciones.filter((publicacion) => publicacion.categoria === selectedPublicationCategory);
@@ -209,15 +215,15 @@ export function CommerceDetailClient({ commerceId, initialComercio, initialPubli
 
             <aside className="order-1 space-y-3 lg:order-2">
               <DigitalBusinessCard comercio={comercio} compact />
-              <a href={whatsappUrl} target="_blank" rel="noreferrer" className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700">
+              <a href={whatsappUrl} target="_blank" rel="noreferrer" onClick={() => void trackCommerceMetric(comercio.id, 'clicsWhatsapp')} className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700">
                 <MessageCircle className="h-4 w-4" />
                 Conversar por WhatsApp
               </a>
-              <a href={telUrl} className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800 transition hover:bg-slate-50">
+              <a href={telUrl} onClick={() => void trackCommerceMetric(comercio.id, 'clicsLlamar')} className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800 transition hover:bg-slate-50">
                 <Phone className="h-4 w-4" />
                 {telefono ?? 'Llamar'}
               </a>
-              <a href={mapsUrl} target="_blank" rel="noreferrer" className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800">
+              <a href={mapsUrl} target="_blank" rel="noreferrer" onClick={() => void trackCommerceMetric(comercio.id, 'clicsMapa')} className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800">
                 <MapPin className="h-4 w-4" />
                 Ver ubicacion
               </a>

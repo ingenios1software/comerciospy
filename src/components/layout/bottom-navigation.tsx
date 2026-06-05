@@ -36,9 +36,9 @@ export function BottomNavigation() {
     ? [
         { label: 'Inicio', href: '/', icon: Home },
         { label: 'Guia', href: '/comercios', icon: List },
+        { label: 'Panel', href: '/admin', icon: User },
         { label: 'Planes', href: '/admin/planes', icon: CreditCard },
-        { label: 'Usuarios', href: '/admin/usuarios', icon: Users },
-        { label: 'Panel', href: '/dashboard', icon: User }
+        { label: 'Usuarios', href: '/admin/usuarios', icon: Users }
       ]
     : user
     ? [

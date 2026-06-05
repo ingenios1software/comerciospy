@@ -1,14 +1,14 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { CalendarClock, CheckCircle2, Pencil, RefreshCw, ShieldCheck, UserPlus, X } from 'lucide-react';
+import { Ban, CalendarClock, CheckCircle2, CreditCard, Pencil, RefreshCw, Search, ShieldCheck, UserPlus, X } from 'lucide-react';
 import { Sidebar } from '@/components/layout/sidebar';
 import { useAuth } from '@/lib/firebase/auth-context';
 import { categories } from '@/lib/categories';
-import { getAllComerciosForAdmin, getAllPlansForAdmin, getAllUsers, removeCommerceSubscriptionFields } from '@/lib/firebase/firestore';
+import { getAllComerciosForAdmin, getAllPlansForAdmin, getAllUsers, removeCommerceSubscriptionFields, updateCommerce, updateUserProfile } from '@/lib/firebase/firestore';
 import { defaultPlans } from '@/lib/plans';
-import { daysUntilSubscription, isSubscriptionExpired, isSubscriptionExpiringSoon } from '@/lib/subscription';
-import type { Comercio, SubscriptionStatus, UserRole, UsuarioApp } from '@/types';
+import { daysUntilSubscription, getSubscriptionVenceAt, isSubscriptionExpired, isSubscriptionExpiringSoon } from '@/lib/subscription';
+import type { Comercio, CommerceVisibilityStatus, PaymentStatus, SubscriptionStatus, UserRole, UsuarioApp } from '@/types';
 
 const roleOptions: Array<{ value: UserRole; label: string }> = [
   { value: 'comercio', label: 'Comercio' },
@@ -23,6 +23,28 @@ const subscriptionStatusOptions: Array<{ value: SubscriptionStatus; label: strin
   { value: 'past_due', label: 'Pago pendiente' },
   { value: 'expired', label: 'Vencida' },
   { value: 'cancelled', label: 'Cancelada' }
+];
+
+const paymentStatusOptions: Array<{ value: PaymentStatus; label: string }> = [
+  { value: 'pending', label: 'Pendiente' },
+  { value: 'paid', label: 'Pagado' },
+  { value: 'overdue', label: 'Atrasado' },
+  { value: 'cancelled', label: 'Cancelado' }
+];
+
+const paymentMethodOptions = [
+  { value: '', label: 'Sin definir' },
+  { value: 'Efectivo', label: 'Efectivo' },
+  { value: 'Transferencia', label: 'Transferencia' },
+  { value: 'Giro', label: 'Giro' },
+  { value: 'Tarjeta', label: 'Tarjeta' }
+];
+
+const visibilityStatusOptions: Array<{ value: CommerceVisibilityStatus; label: string }> = [
+  { value: 'publicado', label: 'Publicado' },
+  { value: 'oculto', label: 'Oculto' },
+  { value: 'pendiente', label: 'Pendiente' },
+  { value: 'suspendido', label: 'Suspendido' }
 ];
 
 const fallbackPlanOptions = [
@@ -55,6 +77,26 @@ function getStatusLabel(status?: SubscriptionStatus) {
 function formatAmount(value?: number, currency = 'PYG') {
   if (!value) return 'Sin monto';
   return `${new Intl.NumberFormat('es-PY').format(value)} ${currency}`;
+}
+
+function addDaysToDate(value: string | undefined, days: number) {
+  const base = value ? new Date(`${value}T00:00:00`) : new Date();
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const date = Number.isNaN(base.getTime()) || base < today ? today : base;
+  date.setDate(date.getDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+function getCommerceVisibilityStatus(comercio?: Comercio | null): CommerceVisibilityStatus {
+  if (comercio?.visibilidadEstado) return comercio.visibilidadEstado;
+  return comercio?.activo ? 'publicado' : 'pendiente';
+}
+
+function getCommercialFilterStatus(user: UsuarioApp, comercio?: Comercio | null) {
+  if (isSubscriptionExpired(user) || user.suscripcionEstado === 'expired' || user.suscripcionEstado === 'cancelled') return 'vencido';
+  if (user.suscripcionEstado === 'past_due' || getCommerceVisibilityStatus(comercio) === 'pendiente') return 'pendiente';
+  return 'activo';
 }
 
 const commerceSubscriptionKeys = [
@@ -109,6 +151,11 @@ export default function AdminUsuariosPage() {
   const [suscripcionInicio, setSuscripcionInicio] = useState(() => new Date().toISOString().slice(0, 10));
   const [suscripcionVenceEn, setSuscripcionVenceEn] = useState(() => dateInputAfterMonths(1));
   const [montoMensual, setMontoMensual] = useState('');
+  const [estadoPago, setEstadoPago] = useState<PaymentStatus>('pending');
+  const [metodoPago, setMetodoPago] = useState('');
+  const [observacionCobranza, setObservacionCobranza] = useState('');
+  const [comprobanteUrl, setComprobanteUrl] = useState('');
+  const [visibilidadEstado, setVisibilidadEstado] = useState<CommerceVisibilityStatus>('publicado');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [createdUser, setCreatedUser] = useState<CreatedUserResponse | null>(null);
@@ -117,6 +164,10 @@ export default function AdminUsuariosPage() {
   const [usersLoading, setUsersLoading] = useState(false);
   const [usersError, setUsersError] = useState<string | null>(null);
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState('todos');
+  const [planFilter, setPlanFilter] = useState('todos');
+  const [cityFilter, setCityFilter] = useState('todos');
+  const [searchFilter, setSearchFilter] = useState('');
 
   const canCreateUsers = profile?.rol === 'superadmin';
   const isEditing = Boolean(editingUserId);
@@ -128,6 +179,24 @@ export default function AdminUsuariosPage() {
         .sort((a, b) => (a.suscripcionVenceEn ?? '9999-12-31').localeCompare(b.suscripcionVenceEn ?? '9999-12-31')),
     [users]
   );
+  const cityOptions = useMemo(() => {
+    return Array.from(new Set(comercios.map((comercio) => comercio.ciudad).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'es'));
+  }, [comercios]);
+  const filteredCommerceUsers = useMemo(() => {
+    const search = searchFilter.trim().toLowerCase();
+
+    return commerceUsers.filter((item) => {
+      const comercio = comerciosById.get(item.comercioId ?? '');
+      const filterStatus = getCommercialFilterStatus(item, comercio);
+      const matchesStatus = statusFilter === 'todos' || filterStatus === statusFilter;
+      const matchesPlan = planFilter === 'todos' || item.planNombre === planFilter;
+      const matchesCity = cityFilter === 'todos' || comercio?.ciudad === cityFilter;
+      const searchable = [item.nombre, item.email, comercio?.nombre, comercio?.ciudad].filter(Boolean).join(' ').toLowerCase();
+      const matchesSearch = !search || searchable.includes(search);
+
+      return matchesStatus && matchesPlan && matchesCity && matchesSearch;
+    });
+  }, [cityFilter, commerceUsers, comerciosById, planFilter, searchFilter, statusFilter]);
   const expiredCount = commerceUsers.filter(isSubscriptionExpired).length;
   const expiringSoonCount = commerceUsers.filter((item) => !isSubscriptionExpired(item) && isSubscriptionExpiringSoon(item)).length;
 
@@ -175,6 +244,11 @@ export default function AdminUsuariosPage() {
     setSuscripcionInicio(new Date().toISOString().slice(0, 10));
     setSuscripcionVenceEn(dateInputAfterMonths(1));
     setMontoMensual('');
+    setEstadoPago('pending');
+    setMetodoPago('');
+    setObservacionCobranza('');
+    setComprobanteUrl('');
+    setVisibilidadEstado('publicado');
     setError(null);
     setCreatedUser(null);
   };
@@ -202,6 +276,11 @@ export default function AdminUsuariosPage() {
     setSuscripcionInicio(selectedUser.suscripcionInicio ?? new Date().toISOString().slice(0, 10));
     setSuscripcionVenceEn(selectedUser.suscripcionVenceEn ?? dateInputAfterMonths(1));
     setMontoMensual(selectedUser.montoMensual ? String(selectedUser.montoMensual) : '');
+    setEstadoPago(selectedUser.estadoPago ?? 'pending');
+    setMetodoPago(selectedUser.metodoPago ?? '');
+    setObservacionCobranza(selectedUser.observacionCobranza ?? '');
+    setComprobanteUrl(selectedUser.comprobanteUrl ?? '');
+    setVisibilidadEstado(getCommerceVisibilityStatus(comercio));
     setError(null);
     setCreatedUser(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -241,7 +320,11 @@ export default function AdminUsuariosPage() {
                   inicio: suscripcionInicio,
                   venceEn: suscripcionVenceEn,
                   montoMensual: Number(montoMensual || 0),
-                  moneda: 'PYG'
+                  moneda: 'PYG',
+                  estadoPago,
+                  metodoPago,
+                  observacion: observacionCobranza,
+                  comprobanteUrl
                 }
               : undefined,
           comercio:
@@ -256,7 +339,8 @@ export default function AdminUsuariosPage() {
                   whatsapp,
                   horario,
                   descripcion,
-                  activo: publicarComercio
+                  activo: visibilidadEstado === 'publicado' && publicarComercio,
+                  visibilidadEstado
                 }
               : undefined
         })
@@ -275,6 +359,89 @@ export default function AdminUsuariosPage() {
       setError(submitError instanceof Error ? submitError.message : 'No se pudo crear el usuario.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleMarkPaid = async (selectedUser: UsuarioApp) => {
+    setUsersError(null);
+    try {
+      await updateUserProfile(selectedUser.id, {
+        suscripcionEstado: 'active',
+        estadoPago: 'paid',
+        pagoActualizadoEn: new Date().toISOString()
+      });
+      setUsers((current) =>
+        current.map((item) =>
+          item.id === selectedUser.id
+            ? {
+                ...item,
+                suscripcionEstado: 'active',
+                estadoPago: 'paid',
+                pagoActualizadoEn: new Date().toISOString()
+              }
+            : item
+        )
+      );
+    } catch {
+      setUsersError('No se pudo marcar como pagado.');
+    }
+  };
+
+  const handleRenew30Days = async (selectedUser: UsuarioApp) => {
+    const nextDueDate = addDaysToDate(selectedUser.suscripcionVenceEn, 30);
+    setUsersError(null);
+
+    try {
+      await updateUserProfile(selectedUser.id, {
+        suscripcionEstado: 'active',
+        suscripcionVenceEn: nextDueDate,
+        suscripcionVenceAt: getSubscriptionVenceAt(nextDueDate),
+        estadoPago: 'paid',
+        pagoActualizadoEn: new Date().toISOString()
+      });
+      setUsers((current) =>
+        current.map((item) =>
+          item.id === selectedUser.id
+            ? {
+                ...item,
+                suscripcionEstado: 'active',
+                suscripcionVenceEn: nextDueDate,
+                suscripcionVenceAt: getSubscriptionVenceAt(nextDueDate),
+                estadoPago: 'paid',
+                pagoActualizadoEn: new Date().toISOString()
+              }
+            : item
+        )
+      );
+    } catch {
+      setUsersError('No se pudo renovar el plan.');
+    }
+  };
+
+  const handleCommerceVisibility = async (selectedUser: UsuarioApp, nextVisibility: CommerceVisibilityStatus) => {
+    const comercioId = selectedUser.comercioId ?? selectedUser.id;
+    setUsersError(null);
+
+    try {
+      await updateCommerce(comercioId, {
+        visibilidadEstado: nextVisibility,
+        activo: nextVisibility === 'publicado',
+        verificado: nextVisibility === 'publicado' ? true : comerciosById.get(comercioId)?.verificado
+      });
+      setComercios((current) =>
+        current.map((comercio) =>
+          comercio.id === comercioId
+            ? {
+                ...comercio,
+                visibilidadEstado: nextVisibility,
+                activo: nextVisibility === 'publicado',
+                verificado: nextVisibility === 'publicado' ? true : comercio.verificado
+              }
+            : comercio
+        )
+      );
+    } catch {
+      setUsersError('No se pudo cambiar la visibilidad del comercio.');
     }
   };
 
@@ -409,16 +576,44 @@ export default function AdminUsuariosPage() {
                       <Field id="montoMensual" label="Monto mensual Gs." value={montoMensual} onChange={setMontoMensual} type="number" placeholder="150000" />
                     </div>
 
-                    <label htmlFor="publicarComercio" className="flex cursor-pointer items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700">
-                      <input
-                        id="publicarComercio"
-                        type="checkbox"
-                        checked={publicarComercio}
-                        onChange={(event) => setPublicarComercio(event.target.checked)}
-                        className="h-4 w-4 rounded border-slate-300 text-accent focus:ring-red-100"
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <SelectField
+                        id="estadoPago"
+                        label="Estado de pago"
+                        value={estadoPago}
+                        onChange={(value) => setEstadoPago(value as PaymentStatus)}
+                        options={paymentStatusOptions}
                       />
-                      Publicar en guia al crear
-                    </label>
+                      <SelectField id="metodoPago" label="Metodo de pago" value={metodoPago} onChange={setMetodoPago} options={paymentMethodOptions} />
+                    </div>
+
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <Field id="comprobanteUrl" label="Comprobante opcional" value={comprobanteUrl} onChange={setComprobanteUrl} placeholder="URL del comprobante" />
+                      <SelectField
+                        id="visibilidadEstado"
+                        label="Visibilidad publica"
+                        value={visibilidadEstado}
+                        onChange={(value) => {
+                          const nextVisibility = value as CommerceVisibilityStatus;
+                          setVisibilidadEstado(nextVisibility);
+                          setPublicarComercio(nextVisibility === 'publicado');
+                        }}
+                        options={visibilityStatusOptions}
+                      />
+                    </div>
+
+                    <div>
+                      <label htmlFor="observacionCobranza" className="mb-2 block text-sm font-semibold text-slate-700">
+                        Observacion de cobranza
+                      </label>
+                      <textarea
+                        id="observacionCobranza"
+                        rows={3}
+                        value={observacionCobranza}
+                        onChange={(event) => setObservacionCobranza(event.target.value)}
+                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-950 outline-none transition focus:border-accent focus:ring-2 focus:ring-red-100"
+                      />
+                    </div>
                   </div>
                 ) : null}
 
@@ -474,6 +669,57 @@ export default function AdminUsuariosPage() {
                 <Metric label="Vencidos" value={expiredCount.toString()} danger={expiredCount > 0} />
               </div>
 
+              <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div className="grid gap-3 md:grid-cols-[1.2fr_0.8fr_0.8fr_0.8fr]">
+                  <div>
+                    <label htmlFor="buscarUsuarios" className="mb-2 block text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                      Buscar
+                    </label>
+                    <div className="flex rounded-2xl border border-slate-200 bg-white">
+                      <span className="flex w-10 items-center justify-center text-slate-400">
+                        <Search className="h-4 w-4" />
+                      </span>
+                      <input
+                        id="buscarUsuarios"
+                        value={searchFilter}
+                        onChange={(event) => setSearchFilter(event.target.value)}
+                        placeholder="Nombre, comercio o email"
+                        className="min-w-0 flex-1 rounded-2xl bg-transparent px-2 py-3 text-sm outline-none"
+                      />
+                    </div>
+                  </div>
+                  <SelectField
+                    id="filtroEstado"
+                    label="Estado"
+                    value={statusFilter}
+                    onChange={setStatusFilter}
+                    options={[
+                      { value: 'todos', label: 'Todos' },
+                      { value: 'activo', label: 'Activo' },
+                      { value: 'pendiente', label: 'Pendiente' },
+                      { value: 'vencido', label: 'Vencido' }
+                    ]}
+                  />
+                  <SelectField
+                    id="filtroPlan"
+                    label="Plan"
+                    value={planFilter}
+                    onChange={setPlanFilter}
+                    options={[{ value: 'todos', label: 'Todos' }, ...planOptions]}
+                  />
+                  <SelectField
+                    id="filtroCiudad"
+                    label="Ciudad"
+                    value={cityFilter}
+                    onChange={setCityFilter}
+                    options={[{ value: 'todos', label: 'Todas' }, ...cityOptions.map((city) => ({ value: city, label: city }))]}
+                  />
+                </div>
+                <p className="mt-3 text-xs font-semibold text-slate-500">
+                  Mostrando {filteredCommerceUsers.length} de {commerceUsers.length}. Ordenado por vencimiento mas proximo.
+                </p>
+              </div>
+
               {usersError ? <p className="mt-5 rounded-2xl bg-rose-50 p-3 text-sm text-rose-700">{usersError}</p> : null}
 
               <div className="mt-5 overflow-x-auto rounded-2xl border border-slate-200">
@@ -496,17 +742,18 @@ export default function AdminUsuariosPage() {
                           Cargando usuarios...
                         </td>
                       </tr>
-                    ) : commerceUsers.length > 0 ? (
-                      commerceUsers.map((item) => {
+                    ) : filteredCommerceUsers.length > 0 ? (
+                      filteredCommerceUsers.map((item) => {
                         const comercio = comerciosById.get(item.comercioId ?? '');
                         const remainingDays = daysUntilSubscription(item.suscripcionVenceEn);
                         const isExpired = isSubscriptionExpired(item);
                         const isExpiringSoon = !isExpired && isSubscriptionExpiringSoon(item);
                         const statusLabel = item.suscripcionEstado === 'cancelled' ? 'Cancelada' : isExpired ? 'Vencida' : getStatusLabel(item.suscripcionEstado);
-                        const guideStatus = isExpired ? 'Pausado' : comercio?.activo ? 'Publicado' : 'Pendiente';
+                        const guideStatus = isExpired ? 'Pausado' : getCommerceVisibilityStatus(comercio);
+                        const rowTone = isExpired ? 'border-l-rose-500' : isExpiringSoon ? 'border-l-amber-400' : 'border-l-emerald-500';
 
                         return (
-                          <tr key={item.id} className="align-top">
+                          <tr key={item.id} className={`align-top border-l-4 ${rowTone}`}>
                             <td className="px-4 py-4">
                               <p className="font-semibold text-slate-950">{comercio?.nombre ?? item.nombre}</p>
                               <p className="mt-1 text-xs text-slate-500">{item.email}</p>
@@ -536,25 +783,70 @@ export default function AdminUsuariosPage() {
                                 </p>
                               ) : null}
                             </td>
-                            <td className="px-4 py-4 text-slate-700">{formatAmount(item.montoMensual, item.moneda)}</td>
+                            <td className="px-4 py-4 text-slate-700">
+                              <p>{formatAmount(item.montoMensual, item.moneda)}</p>
+                              <p className="mt-1 text-xs text-slate-500">{paymentStatusOptions.find((option) => option.value === item.estadoPago)?.label ?? 'Pago pendiente'}</p>
+                              {item.metodoPago ? <p className="mt-1 text-xs text-slate-500">{item.metodoPago}</p> : null}
+                            </td>
                             <td className="px-4 py-4">
                               <span
-                                className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
-                                  isExpired ? 'bg-rose-50 text-rose-700' : comercio?.activo ? 'bg-slate-950 text-white' : 'bg-slate-100 text-slate-600'
+                                className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold capitalize ${
+                                  isExpired
+                                    ? 'bg-rose-50 text-rose-700'
+                                    : getCommerceVisibilityStatus(comercio) === 'publicado'
+                                      ? 'bg-slate-950 text-white'
+                                      : getCommerceVisibilityStatus(comercio) === 'suspendido'
+                                        ? 'bg-rose-50 text-rose-700'
+                                        : 'bg-slate-100 text-slate-600'
                                 }`}
                               >
                                 {guideStatus}
                               </span>
                             </td>
                             <td className="px-4 py-4">
-                              <button
-                                type="button"
-                                onClick={() => handleEditUser(item)}
-                                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
-                              >
-                                <Pencil className="h-3.5 w-3.5" />
-                                Editar
-                              </button>
+                              <div className="flex min-w-[220px] flex-wrap gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => handleEditUser(item)}
+                                  className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+                                >
+                                  <Pencil className="h-3.5 w-3.5" />
+                                  Editar
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleMarkPaid(item)}
+                                  className="inline-flex items-center gap-1 rounded-xl bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700"
+                                >
+                                  <CreditCard className="h-3.5 w-3.5" />
+                                  Pagado
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRenew30Days(item)}
+                                  className="rounded-xl bg-slate-950 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-800"
+                                >
+                                  +30 dias
+                                </button>
+                                {getCommerceVisibilityStatus(comercio) === 'publicado' ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCommerceVisibility(item, 'suspendido')}
+                                    className="inline-flex items-center gap-1 rounded-xl bg-rose-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-rose-700"
+                                  >
+                                    <Ban className="h-3.5 w-3.5" />
+                                    Suspender
+                                  </button>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCommerceVisibility(item, 'publicado')}
+                                    className="rounded-xl bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-100 transition hover:bg-emerald-100"
+                                  >
+                                    Activar
+                                  </button>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         );

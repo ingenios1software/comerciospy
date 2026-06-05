@@ -1,8 +1,11 @@
+"use client";
+
 import Link from 'next/link';
 import { ArrowUpRight, Clock, Images, MapPin, MessageCircle, Phone, Store } from 'lucide-react';
 import type { Comercio, CommercePreview, Publicacion } from '@/types';
 import { FavoriteButton } from '@/components/favorites/favorite-button';
 import { getPublicationCode, getPublicationMediaUrl } from '@/lib/publications';
+import { trackCommerceMetric } from '@/lib/firebase/firestore';
 import { buildMapsUrl, buildWhatsappUrl, cleanPhone, formatPrice } from '@/lib/utils/format';
 
 type CommerceCardProps = {
@@ -74,6 +77,7 @@ export function CommerceCard({ comercio, publicaciones = [] }: CommerceCardProps
               imageUrl: mainImage
             }}
             className="absolute right-1 top-1"
+            onFavoriteAdded={() => void trackCommerceMetric(comercio.id, 'favoritos')}
           />
         </div>
 
@@ -115,15 +119,15 @@ export function CommerceCard({ comercio, publicaciones = [] }: CommerceCardProps
         ) : null}
 
         <div className="col-span-2 mt-1 grid grid-cols-4 gap-1.5">
-          <a href={telUrl} className="inline-flex h-8 items-center justify-center gap-1 rounded-md bg-slate-100 px-2 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-200 active:scale-[0.98]" aria-label={`Llamar a ${comercio.nombre}`}>
+          <a href={telUrl} onClick={() => void trackCommerceMetric(comercio.id, 'clicsLlamar')} className="inline-flex h-8 items-center justify-center gap-1 rounded-md bg-slate-100 px-2 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-200 active:scale-[0.98]" aria-label={`Llamar a ${comercio.nombre}`}>
             <Phone className="h-3.5 w-3.5" />
             <span className="hidden min-[360px]:inline">Llamar</span>
           </a>
-          <a href={whatsappUrl} target="_blank" rel="noreferrer" className="inline-flex h-8 items-center justify-center gap-1 rounded-md bg-emerald-600 px-2 text-[11px] font-semibold text-white transition hover:bg-emerald-700 active:scale-[0.98]" aria-label={`WhatsApp de ${comercio.nombre}`}>
+          <a href={whatsappUrl} target="_blank" rel="noreferrer" onClick={() => void trackCommerceMetric(comercio.id, 'clicsWhatsapp')} className="inline-flex h-8 items-center justify-center gap-1 rounded-md bg-emerald-600 px-2 text-[11px] font-semibold text-white transition hover:bg-emerald-700 active:scale-[0.98]" aria-label={`WhatsApp de ${comercio.nombre}`}>
             <MessageCircle className="h-3.5 w-3.5" />
             Chat
           </a>
-          <a href={mapsUrl} target="_blank" rel="noreferrer" className="inline-flex h-8 items-center justify-center gap-1 rounded-md bg-slate-100 px-2 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-200 active:scale-[0.98]" aria-label={`Ubicacion de ${comercio.nombre}`}>
+          <a href={mapsUrl} target="_blank" rel="noreferrer" onClick={() => void trackCommerceMetric(comercio.id, 'clicsMapa')} className="inline-flex h-8 items-center justify-center gap-1 rounded-md bg-slate-100 px-2 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-200 active:scale-[0.98]" aria-label={`Ubicacion de ${comercio.nombre}`}>
             <MapPin className="h-3.5 w-3.5" />
             Mapa
           </a>

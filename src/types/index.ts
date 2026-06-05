@@ -1,5 +1,16 @@
 export type UserRole = 'superadmin' | 'admin' | 'comercio' | 'usuario' | 'cliente';
 export type SubscriptionStatus = 'trial' | 'active' | 'past_due' | 'expired' | 'cancelled';
+export type PaymentStatus = 'pending' | 'paid' | 'overdue' | 'cancelled';
+export type CommerceVisibilityStatus = 'publicado' | 'oculto' | 'pendiente' | 'suspendido';
+
+export type CommerceMetrics = {
+  visitasFicha?: number;
+  clicsWhatsapp?: number;
+  clicsLlamar?: number;
+  clicsMapa?: number;
+  favoritos?: number;
+  compartidos?: number;
+};
 
 export type UsuarioApp = {
   id: string;
@@ -14,6 +25,11 @@ export type UsuarioApp = {
   suscripcionVenceAt?: unknown;
   montoMensual?: number;
   moneda?: string;
+  estadoPago?: PaymentStatus;
+  metodoPago?: string;
+  observacionCobranza?: string;
+  comprobanteUrl?: string;
+  pagoActualizadoEn?: string;
   activo: boolean;
   creadoEn: string;
 };
@@ -79,6 +95,13 @@ export type Comercio = {
   suscripcionVenceAt?: unknown;
   montoMensual?: number;
   moneda?: string;
+  estadoPago?: PaymentStatus;
+  metodoPago?: string;
+  observacionCobranza?: string;
+  comprobanteUrl?: string;
+  pagoActualizadoEn?: string;
+  visibilidadEstado?: CommerceVisibilityStatus;
+  metricas?: CommerceMetrics;
   ubicacionUrl?: string;
   ubicacion: {
     lat: number;
@@ -101,6 +124,7 @@ export type Publicacion = {
   mediaType?: 'image' | 'video';
   duracionSegundos?: number;
   moderacionEstado?: 'approved' | 'pending' | 'rejected';
+  rechazoMotivo?: string;
   estado?: 'disponible' | 'vendido';
   vendidoEn?: string;
   categoria: string;

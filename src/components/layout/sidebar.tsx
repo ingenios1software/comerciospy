@@ -13,6 +13,7 @@ const sidebarItems = [
 ];
 
 const adminSidebarItems = [
+  { label: 'Resumen SaaS', href: '/admin', icon: LayoutDashboard },
   { label: 'Usuarios', href: '/admin/usuarios', icon: Users },
   { label: 'Planes', href: '/admin/planes', icon: CreditCard }
 ];
@@ -21,6 +22,7 @@ export function Sidebar() {
   const { user, profile, loading, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const navigationItems = profile?.rol === 'superadmin' ? adminSidebarItems : sidebarItems;
 
   const handleLogout = async () => {
     await logout();
@@ -43,9 +45,9 @@ export function Sidebar() {
           ) : null}
         </div>
         <nav className="space-y-2">
-          {[...sidebarItems, ...(profile?.rol === 'superadmin' ? adminSidebarItems : [])].map((item) => {
+          {navigationItems.map((item) => {
             const Icon = item.icon;
-            const active = pathname.startsWith(item.href);
+            const active = item.href === '/admin' ? pathname === '/admin' : pathname.startsWith(item.href);
             return (
               <Link
                 key={item.href}

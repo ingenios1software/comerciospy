@@ -3,6 +3,7 @@
 import { Check, Copy, ExternalLink, MessageCircle, Share2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { Comercio } from '@/types';
+import { trackCommerceMetric } from '@/lib/firebase/firestore';
 import { buildPublicCommerceUrl } from '@/lib/utils/format';
 
 type DigitalBusinessCardProps = {
@@ -36,6 +37,7 @@ export function DigitalBusinessCard({ comercio, compact = false }: DigitalBusine
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(publicUrl);
+    void trackCommerceMetric(comercio.id, 'compartidos');
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1800);
   };
@@ -52,6 +54,7 @@ export function DigitalBusinessCard({ comercio, compact = false }: DigitalBusine
         text: `${comercio.nombre} - ${comercio.rubro}`,
         url: publicUrl
       });
+      void trackCommerceMetric(comercio.id, 'compartidos');
     } catch {
       await handleCopy();
     }
@@ -104,6 +107,7 @@ export function DigitalBusinessCard({ comercio, compact = false }: DigitalBusine
           href={whatsappShareUrl}
           target="_blank"
           rel="noreferrer"
+          onClick={() => void trackCommerceMetric(comercio.id, 'compartidos')}
           className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-3 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700"
         >
           <MessageCircle className="h-4 w-4" />
