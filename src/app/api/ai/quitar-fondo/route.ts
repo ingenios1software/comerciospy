@@ -66,16 +66,19 @@ export async function POST(request: Request) {
 
   const imageModel = process.env.OPENAI_IMAGE_MODEL ?? 'gpt-image-1.5';
   const imageQuality = process.env.OPENAI_IMAGE_QUALITY ?? 'medium';
+  const normalizedImageModel = imageModel.toLowerCase();
+  const supportsInputFidelity = normalizedImageModel.startsWith('gpt-image-') && !normalizedImageModel.includes('mini');
   const editFormData = new FormData();
   editFormData.append('model', imageModel);
   editFormData.append(
     'prompt',
     [
-      'Remove the background from this product photo.',
-      'Keep only the clothing item or product exactly as photographed.',
-      'Preserve the real colors, fabric texture, shape, proportions, and product edges.',
-      'Do not add text, logos, mannequins, people, hangers, shadows outside the product, or new objects.',
-      'Return the product on a transparent background for an ecommerce catalog.'
+      'Remove only the background from the provided photo.',
+      'Preserve the original composition, canvas, aspect ratio, framing, camera angle, and scale.',
+      'If people are visible, keep every visible person fully intact, including faces, bodies, hair, skin, hands, legs, footwear, clothing, accessories, and pose.',
+      'If products or clothing are visible without people, keep those products exactly as photographed.',
+      'Do not isolate a single garment from a person. Do not crop, zoom, reframe, repaint, redesign, replace faces, change clothing, change colors, add mannequins, add text, or invent missing parts.',
+      'Only make the scenery/background transparent while preserving the foreground subjects as faithfully as possible.'
     ].join(' ')
   );
   editFormData.append('image', image, image.name || 'publicacion.jpg');
@@ -84,6 +87,9 @@ export async function POST(request: Request) {
   editFormData.append('output_compression', '85');
   editFormData.append('quality', imageQuality);
   editFormData.append('size', 'auto');
+  if (supportsInputFidelity) {
+    editFormData.append('input_fidelity', 'high');
+  }
 
   let openAiResponse: Response;
   try {

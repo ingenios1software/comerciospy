@@ -732,7 +732,7 @@ export default function PublicarPage() {
                   <video src={previewUrl} className="max-h-72 w-full rounded-2xl bg-black object-contain" controls muted playsInline preload="metadata" />
                 ) : previewUrl ? (
                   <div className="relative w-full">
-                    <img src={previewUrl} alt="Vista previa" className={`max-h-72 w-full rounded-2xl object-cover transition ${removingBackground ? 'opacity-55' : ''}`} />
+                    <img src={previewUrl} alt="Vista previa" className={`max-h-72 w-full rounded-2xl object-contain transition ${removingBackground ? 'opacity-55' : ''}`} />
                     {removingBackground ? (
                       <div className="absolute inset-0 flex flex-col items-center justify-center rounded-2xl bg-white/75 text-slate-700 backdrop-blur-sm">
                         <Loader2 className="h-7 w-7 animate-spin" />
