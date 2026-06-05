@@ -133,6 +133,21 @@ export type Publicacion = {
   creadoEn: string;
 };
 
+export type PublicationComment = {
+  id: string;
+  nombre: string;
+  texto: string;
+  creadoEn: string;
+};
+
+export type PublicationEngagement = {
+  publicationId: string;
+  likesCount: number;
+  commentsCount: number;
+  comentarios: PublicationComment[];
+  actualizadoEn?: string;
+};
+
 export type AiPublicationSuggestion = {
   titulo: string;
   descripcion: string;

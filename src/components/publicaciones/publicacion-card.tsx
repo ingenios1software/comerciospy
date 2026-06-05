@@ -4,7 +4,8 @@ import { BadgePercent, CheckCircle2, MessageCircle } from 'lucide-react';
 import { useState } from 'react';
 import { CartButton } from '@/components/cart/cart-button';
 import { FavoriteButton } from '@/components/favorites/favorite-button';
-import { ImageLightbox, type LightboxImage } from '@/components/ui/image-lightbox';
+import { PublicacionPreviewModal } from '@/components/publicaciones/publicacion-preview-modal';
+import { likePublication } from '@/lib/publication-engagement';
 import type { Comercio, Publicacion } from '@/types';
 import { buildWhatsappUrl, formatPrice } from '@/lib/utils/format';
 import { buildPublicationWhatsappMessage, getPublicationCode, getPublicationHref, getPublicationMediaUrl } from '@/lib/publications';
@@ -18,7 +19,7 @@ type PublicacionCardProps = {
 };
 
 export function PublicacionCard({ publicacion, comercio, onMarkSold, markingSold = false, variant = 'default' }: PublicacionCardProps) {
-  const [activeImageIndex, setActiveImageIndex] = useState<number | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const mediaUrl = getPublicationMediaUrl(publicacion);
   const isVideo = publicacion.mediaType === 'video' && Boolean(mediaUrl);
   const compact = variant === 'compact';
@@ -42,27 +43,25 @@ export function PublicacionCard({ publicacion, comercio, onMarkSold, markingSold
     whatsapp: comercio?.whatsapp,
     telefono: comercio?.telefono
   };
-  const imageItems: LightboxImage[] = !isVideo && mediaUrl
-    ? [
-        {
-          src: mediaUrl,
-          alt: publicacion.titulo
-        }
-      ]
-    : [];
-
   return (
     <>
       <article className={`overflow-hidden border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-soft ${compact ? 'rounded-md' : 'rounded-2xl'}`}>
         <div className={`relative overflow-hidden bg-slate-100 ${compact ? 'aspect-square' : 'aspect-[4/3]'}`}>
           {isVideo ? (
-            <video src={mediaUrl} className="h-full w-full bg-black object-cover" controls muted playsInline preload="metadata" />
+            <button
+              type="button"
+              onClick={() => setPreviewOpen(true)}
+              className="group h-full w-full focus:outline-none focus:ring-2 focus:ring-accent focus:ring-inset"
+              aria-label={`Ver video de ${publicacion.titulo}`}
+            >
+              <video src={mediaUrl} className="h-full w-full bg-black object-cover transition duration-500 group-hover:scale-105" muted playsInline preload="metadata" />
+            </button>
           ) : mediaUrl ? (
             <button
               type="button"
-              onClick={() => setActiveImageIndex(0)}
-              className="group h-full w-full cursor-zoom-in focus:outline-none focus:ring-2 focus:ring-accent focus:ring-inset"
-              aria-label={`Ampliar imagen de ${publicacion.titulo}`}
+              onClick={() => setPreviewOpen(true)}
+              className="group h-full w-full focus:outline-none focus:ring-2 focus:ring-accent focus:ring-inset"
+              aria-label={`Ver publicacion de ${publicacion.titulo}`}
             >
               <img src={mediaUrl} alt={publicacion.titulo} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
             </button>
@@ -85,6 +84,7 @@ export function PublicacionCard({ publicacion, comercio, onMarkSold, markingSold
                   href: publicationHref,
                   imageUrl: mediaUrl
                 }}
+                onFavoriteAdded={() => void likePublication(publicacion.id)}
               />
               <CartButton item={cartItem} compact />
             </div>
@@ -128,7 +128,7 @@ export function PublicacionCard({ publicacion, comercio, onMarkSold, markingSold
           ) : null}
         </div>
       </article>
-      <ImageLightbox images={imageItems} activeIndex={activeImageIndex} onChange={setActiveImageIndex} onClose={() => setActiveImageIndex(null)} />
+      {previewOpen ? <PublicacionPreviewModal publicacion={publicacion} comercio={comercio} onClose={() => setPreviewOpen(false)} /> : null}
     </>
   );
 }

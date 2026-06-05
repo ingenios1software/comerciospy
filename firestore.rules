@@ -36,6 +36,15 @@ service cloud.firestore {
         && (!('moderacionEstado' in resource.data) || resource.data.moderacionEstado == 'approved');
     }
 
+    function isValidPublicationEngagement(publicacionId) {
+      return request.resource.data.keys().hasOnly(['publicationId', 'likesCount', 'commentsCount', 'comentarios', 'actualizadoEn'])
+        && request.resource.data.publicationId == publicacionId
+        && (!('likesCount' in request.resource.data) || (request.resource.data.likesCount is int && request.resource.data.likesCount >= 0 && request.resource.data.likesCount <= 1000000))
+        && (!('commentsCount' in request.resource.data) || (request.resource.data.commentsCount is int && request.resource.data.commentsCount >= 0 && request.resource.data.commentsCount <= 1000000))
+        && (!('comentarios' in request.resource.data) || (request.resource.data.comentarios is list && request.resource.data.comentarios.size() <= 200))
+        && (!('actualizadoEn' in request.resource.data) || request.resource.data.actualizadoEn is string);
+    }
+
     function isComercioOwner(comercioId) {
       return isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.comercioId == comercioId && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.rol == 'comercio';
     }
@@ -82,6 +91,12 @@ service cloud.firestore {
       allow read: if isPublicPublication() || isComercioOwner(resource.data.comercioId) || isSuperAdmin();
       allow create: if (isComercioOwner(request.resource.data.comercioId) && hasUsableSubscription(request.auth.uid)) || isSuperAdmin();
       allow update, delete: if (isComercioOwner(resource.data.comercioId) && hasUsableSubscription(request.auth.uid)) || isSuperAdmin();
+    }
+
+    match /publicacionInteracciones/{publicacionId} {
+      allow read: if true;
+      allow create, update: if isValidPublicationEngagement(publicacionId);
+      allow delete: if isSuperAdmin();
     }
 
     match /categorias/{categoriaId} {

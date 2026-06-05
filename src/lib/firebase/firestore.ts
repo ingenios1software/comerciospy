@@ -5,7 +5,7 @@ import { defaultPlans, sortPlans } from '@/lib/plans';
 import type { Categoria, Comercio, PlanComercial, Publicacion, UsuarioApp } from '@/types';
 import type { CommerceMetrics } from '@/types';
 
-function getFirestoreInstance() {
+export function getFirestoreInstance() {
   return getFirestore(getFirebaseApp());
 }
 
