@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Sidebar } from '@/components/layout/sidebar';
 import { DigitalBusinessCard } from '@/components/comercios/digital-business-card';
 import { RenewalNotice } from '@/components/subscription/renewal-notice';
+import { SubscriptionSummaryCard } from '@/components/subscription/subscription-summary-card';
 import { useAuth } from '@/lib/firebase/auth-context';
 import { getComercioById, getPublicationsByCommerce, markPublicationAsSold } from '@/lib/firebase/firestore';
 import { samplePublicaciones } from '@/lib/mockData';
@@ -88,7 +89,8 @@ export default function DashboardPage() {
       <main className="min-h-screen bg-surface text-slate-950">
         <div className="lg:flex lg:min-h-screen">
           <Sidebar />
-          <div className="mx-auto w-full max-w-5xl px-4 pb-28 pt-24 sm:px-6 lg:px-8 lg:pt-8">
+          <div className="mx-auto w-full max-w-5xl space-y-4 px-4 pb-28 pt-24 sm:px-6 lg:px-8 lg:pt-8">
+            <SubscriptionSummaryCard owner={profile} />
             <RenewalNotice owner={profile} />
           </div>
         </div>
@@ -141,6 +143,8 @@ export default function DashboardPage() {
                 <p className="mt-1 text-2xl font-semibold text-slate-950">{subscriptionExpired ? 'Bloqueado' : 'Listo'}</p>
               </div>
             </section>
+
+            {profile?.rol === 'comercio' ? <SubscriptionSummaryCard owner={profile} /> : null}
 
             {comercio ? (
               <section className="grid gap-4 lg:grid-cols-[1fr_1.1fr] lg:items-stretch">
