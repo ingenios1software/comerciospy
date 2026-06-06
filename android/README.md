@@ -45,3 +45,5 @@ Estos archivos y cualquier llave de firma estan excluidos de Git.
 6. Subir el `.aab` a la prueba cerrada de Google Play.
 
 No se debe crear una llave definitiva hasta decidir donde se guardaran la llave y sus contrasenas. Perderla complica futuras actualizaciones.
+
+La huella de la llave de carga actual ya esta registrada para permitir pruebas firmadas. Cuando Google Play genere la llave de firma de la aplicacion, su huella SHA-256 tambien debe agregarse a `twa-manifest.json` y `assetlinks.json`.

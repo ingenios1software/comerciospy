@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "py.comerciospy.app",
+      "sha256_cert_fingerprints": [
+        "EC:88:DA:AE:B2:DD:F5:CF:2F:80:C0:4B:A3:27:3D:02:59:E1:66:10:3D:60:BA:82:82:28:5A:1D:DB:9D:C2:AB"
+      ]
+    }
+  }
+]
