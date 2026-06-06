@@ -1,6 +1,7 @@
 "use client";
 
-import { BadgePercent, CheckCircle2, MessageCircle } from 'lucide-react';
+import Link from 'next/link';
+import { BadgePercent, CheckCircle2, MessageCircle, Store } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { CartButton } from '@/components/cart/cart-button';
 import { FavoriteButton } from '@/components/favorites/favorite-button';
@@ -34,6 +35,8 @@ export function PublicacionCard({ publicacion, comercio, onMarkSold, markingSold
   const compact = variant === 'compact';
   const publicationCode = getPublicationCode(publicacion);
   const publicationHref = getPublicationHref(publicacion);
+  const commerceCatalogHref = `/comercios/${comercio?.id ?? publicacion.comercioId}#publicaciones`;
+  const commerceName = comercio?.nombre ?? 'Ver comercio';
   const appOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://comerciospy.vercel.app';
   const whatsappUrl = buildWhatsappUrl(
     comercio?.whatsapp || comercio?.telefono,
@@ -154,14 +157,24 @@ export function PublicacionCard({ publicacion, comercio, onMarkSold, markingSold
             ) : null}
           </div>
           {mediaUrl ? (
-            <ShareMediaButton
-              url={publicationHref}
-              title="ComerciosPY"
-              text="Mira este articulo en ComerciosPY."
-              label={`Compartir articulo: ${publicacion.titulo}`}
-              minimal
-              className={compact ? 'absolute bottom-1 right-1' : 'absolute bottom-2 right-2'}
-            />
+            <>
+              <Link
+                href={commerceCatalogHref}
+                className={`absolute bottom-1 left-1 inline-flex max-w-[calc(100%_-_2.75rem)] items-center gap-1 rounded bg-slate-950/70 font-semibold text-white shadow-sm backdrop-blur-sm transition hover:bg-slate-950/90 focus:outline-none focus:ring-2 focus:ring-white ${compact ? 'h-6 px-1.5 text-[9px]' : 'bottom-2 left-2 h-7 px-2 text-[11px]'}`}
+                aria-label={`Ver catalogo completo de ${commerceName}`}
+              >
+                <Store className={compact ? 'h-3 w-3 shrink-0' : 'h-3.5 w-3.5 shrink-0'} />
+                <span className="truncate">{commerceName}</span>
+              </Link>
+              <ShareMediaButton
+                url={publicationHref}
+                title="ComerciosPY"
+                text="Mira este articulo en ComerciosPY."
+                label={`Compartir articulo: ${publicacion.titulo}`}
+                minimal
+                className={compact ? 'absolute bottom-1 right-1' : 'absolute bottom-2 right-2'}
+              />
+            </>
           ) : null}
         </div>
         <div className={compact ? 'space-y-1.5 p-2' : 'space-y-3 p-4'}>

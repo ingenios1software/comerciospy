@@ -1,7 +1,8 @@
 "use client";
 
+import Link from 'next/link';
 import { type FormEvent, type TouchEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { CheckCircle2, ChevronLeft, ChevronRight, Heart, Loader2, MessageCircle, Send, X } from 'lucide-react';
+import { CheckCircle2, ChevronLeft, ChevronRight, Heart, Loader2, MessageCircle, Send, Store, X } from 'lucide-react';
 import { CartButton } from '@/components/cart/cart-button';
 import { FavoriteButton } from '@/components/favorites/favorite-button';
 import { ShareMediaButton } from '@/components/ui/share-media-button';
@@ -77,6 +78,8 @@ export function PublicacionPreviewModal({
   const isVideo = activePublicacion.mediaType === 'video' && Boolean(mediaUrl);
   const publicationCode = getPublicationCode(activePublicacion);
   const publicationHref = getPublicationHref(activePublicacion);
+  const commerceCatalogHref = `/comercios/${activeComercio?.id ?? activePublicacion.comercioId}#publicaciones`;
+  const commerceName = activeComercio?.nombre ?? 'Ver comercio';
   const appOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://comerciospy.vercel.app';
   const whatsappUrl = buildWhatsappUrl(
     activeComercio?.whatsapp || activeComercio?.telefono,
@@ -256,7 +259,15 @@ export function PublicacionPreviewModal({
         <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-3 sm:px-5">
           <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">Publicacion #{publicationCode}</p>
-            <p className="mt-0.5 truncate text-sm font-semibold text-slate-700">{activeComercio?.nombre ?? activePublicacion.ciudad}</p>
+            <Link
+              href={commerceCatalogHref}
+              onClick={onClose}
+              className="mt-0.5 inline-flex max-w-full items-center gap-1 text-sm font-semibold text-slate-700 transition hover:text-accent"
+              aria-label={`Ver catalogo completo de ${commerceName}`}
+            >
+              <Store className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">{commerceName}</span>
+            </Link>
           </div>
           <div className="flex shrink-0 items-center gap-2">
             {canNavigate ? (
