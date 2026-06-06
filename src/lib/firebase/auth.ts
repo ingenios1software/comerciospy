@@ -2,14 +2,18 @@ import {
   browserLocalPersistence,
   browserSessionPersistence,
   createUserWithEmailAndPassword,
+  EmailAuthProvider,
   getAuth,
   GoogleAuthProvider,
   inMemoryPersistence,
+  reauthenticateWithCredential,
   sendPasswordResetEmail,
   setPersistence,
   signInWithEmailAndPassword,
   signInWithPopup,
   signOut,
+  updatePassword,
+  type User,
   type UserCredential
 } from 'firebase/auth';
 import { getFirebaseApp } from './firebase';
@@ -50,6 +54,16 @@ export async function registerUser(email: string, password: string): Promise<Use
 export async function sendUserPasswordReset(email: string): Promise<void> {
   const auth = await ensureLocalPersistence(getAuthInstance());
   return sendPasswordResetEmail(auth, normalizeEmail(email));
+}
+
+export async function changeUserPassword(user: User, currentPassword: string, newPassword: string): Promise<void> {
+  if (!user.email) {
+    throw new Error('La cuenta no tiene un email asociado.');
+  }
+
+  const credential = EmailAuthProvider.credential(user.email, currentPassword);
+  await reauthenticateWithCredential(user, credential);
+  await updatePassword(user, newPassword);
 }
 
 export async function signInWithGoogle(): Promise<UserCredential> {
@@ -150,4 +164,30 @@ export function getPasswordResetErrorMessage(error: unknown) {
   }
 
   return 'No se pudo enviar el correo de recuperacion.';
+}
+
+export function getChangePasswordErrorMessage(error: unknown) {
+  const code = getAuthErrorCode(error);
+
+  if (code === 'auth/invalid-credential' || code === 'auth/wrong-password') {
+    return 'La contrasena actual no coincide. Revisa la contrasena temporal e intenta nuevamente.';
+  }
+
+  if (code === 'auth/weak-password') {
+    return 'La nueva contrasena es demasiado debil. Usa al menos 8 caracteres.';
+  }
+
+  if (code === 'auth/requires-recent-login') {
+    return 'Por seguridad, cierra sesion, vuelve a ingresar e intenta cambiar la contrasena nuevamente.';
+  }
+
+  if (code === 'auth/too-many-requests') {
+    return 'Hay demasiados intentos. Espera unos minutos antes de volver a probar.';
+  }
+
+  if (code === 'auth/network-request-failed') {
+    return 'No se pudo conectar con Firebase. Revisa la conexion e intenta nuevamente.';
+  }
+
+  return 'No se pudo cambiar la contrasena. Revisa los datos e intenta nuevamente.';
 }

@@ -6,6 +6,7 @@ import { Building2, Check, Clipboard, ExternalLink, ImagePlus, Loader2, MapPin, 
 import { Sidebar } from '@/components/layout/sidebar';
 import { ImageLightbox, type LightboxImage } from '@/components/ui/image-lightbox';
 import { RenewalNotice } from '@/components/subscription/renewal-notice';
+import { ChangePasswordCard } from '@/components/account/change-password-card';
 import { useAuth } from '@/lib/firebase/auth-context';
 import { getComercioById, updateCommerce } from '@/lib/firebase/firestore';
 import { uploadFile } from '@/lib/firebase/storage';
@@ -469,6 +470,7 @@ export default function PerfilPage() {
           <Sidebar />
           <div className="mx-auto w-full max-w-5xl px-4 pb-28 pt-24 sm:px-6 lg:px-8 lg:pt-8">
             <RenewalNotice owner={profile} showBackLink />
+            <ChangePasswordCard />
           </div>
         </div>
       </main>
@@ -704,6 +706,7 @@ export default function PerfilPage() {
               </button>
             </form>
           </section>
+          <ChangePasswordCard />
         </div>
       </div>
       <ImageLightbox images={photoLightboxItems} activeIndex={activePhotoIndex} onChange={setActivePhotoIndex} onClose={() => setActivePhotoIndex(null)} />
