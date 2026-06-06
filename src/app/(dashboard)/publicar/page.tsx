@@ -333,16 +333,16 @@ async function moderatePublicationMedia({
 
   if (!response.ok) {
     if (skippableModerationStatuses.includes(response.status)) {
-      console.warn('Moderacion IA no disponible, se publica pendiente de revision.', data?.error ?? response.statusText);
+      console.warn('Moderacion IS95 no disponible, se publica pendiente de revision.', data?.error ?? response.statusText);
       return { status: 'pending' };
     }
 
-    throw new Error(data?.error ?? 'No pudimos revisar el contenido con IA.');
+    throw new Error(data?.error ?? 'No pudimos revisar el contenido con IS95.');
   }
 
   if (!data?.approved) {
     const categories = data?.flaggedCategories?.length ? ` (${data.flaggedCategories.join(', ')})` : '';
-    throw new Error(`No podemos publicar este contenido porque la revision IA detecto material no permitido${categories}.`);
+    throw new Error(`No podemos publicar este contenido porque la revision IS95 detecto material no permitido${categories}.`);
   }
 
   return { status: 'approved' };
@@ -380,11 +380,11 @@ function getAiAnalysisMessage(error: unknown) {
   const searchable = message.toLowerCase();
 
   if (searchable.includes('api key') || searchable.includes('openai_api_key') || searchable.includes('vercel')) {
-    return 'La IA no esta disponible por configuracion del servidor. Podes completar el texto manualmente y publicar igual.';
+    return 'IS95 no esta disponible por configuracion del servidor. Podes completar el texto manualmente y publicar igual.';
   }
 
   if (searchable.includes('creditos') || searchable.includes('billing') || searchable.includes('limite mensual')) {
-    return 'La IA no esta disponible por limite de uso de OpenAI. Podes completar el texto manualmente y publicar igual.';
+    return 'IS95 no esta disponible por limite de uso. Podes completar el texto manualmente y publicar igual.';
   }
 
   return message || 'No se pudo analizar la foto.';
@@ -395,11 +395,11 @@ function getBackgroundRemovalMessage(error: unknown) {
   const searchable = message.toLowerCase();
 
   if (searchable.includes('api key') || searchable.includes('openai_api_key') || searchable.includes('vercel')) {
-    return 'La IA no esta disponible por configuracion del servidor. La foto queda sin cambios.';
+    return 'IS95 no esta disponible por configuracion del servidor. La foto queda sin cambios.';
   }
 
   if (searchable.includes('creditos') || searchable.includes('billing') || searchable.includes('limite mensual')) {
-    return 'La IA no puede quitar el fondo por limite de uso de OpenAI. La foto queda sin cambios.';
+    return 'IS95 no puede quitar el fondo por limite de uso. La foto queda sin cambios.';
   }
 
   return message || 'No pudimos quitar el fondo de la foto.';
@@ -499,17 +499,17 @@ export default function PublicarPage() {
     setAiSuggestion(null);
 
     if (subscriptionExpired) {
-      setError('Tu periodo esta vencido. Renova la suscripcion para usar la IA.');
+      setError('Tu periodo esta vencido. Renova la suscripcion para usar IS95.');
       return;
     }
 
     if (!mediaFile || !mediaKind) {
-      setError('Sube una foto o video para que la IA pueda analizarlo.');
+      setError('Sube una foto o video para que IS95 pueda analizarlo.');
       return;
     }
 
     if (removingBackground) {
-      setError('Espera a que la IA termine de quitar el fondo.');
+      setError('Espera a que IS95 termine de quitar el fondo.');
       return;
     }
 
@@ -617,7 +617,7 @@ export default function PublicarPage() {
     }
 
     if (removingBackground) {
-      setError('Espera a que la IA termine de quitar el fondo.');
+      setError('Espera a que IS95 termine de quitar el fondo.');
       setSubmitting(false);
       return;
     }
@@ -708,7 +708,7 @@ export default function PublicarPage() {
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.26em] text-accent">Publicar</p>
               <h1 className="mt-2 text-3xl font-semibold">Nueva publicacion</h1>
-              <p className="mt-2 text-sm leading-6 text-slate-600">Carga una foto o video corto y usa la IA para escribir una descripcion mas clara.</p>
+              <p className="mt-2 text-sm leading-6 text-slate-600">Carga una foto o video corto y usa IS95 para escribir una descripcion mas clara.</p>
             </div>
             {comercio ? (
               <Link href={`/comercios/${comercio.id}`} className="rounded-2xl bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-200">
@@ -768,7 +768,7 @@ export default function PublicarPage() {
                   {removingBackground ? <Loader2 className="h-4 w-4 animate-spin" /> : <Scissors className="h-4 w-4" />}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-semibold text-slate-800">Quitar fondo con IA</span>
+                  <span className="block text-sm font-semibold text-slate-800">Quitar fondo con IS95</span>
                   <span className="mt-1 block text-xs leading-5 text-slate-500">
                     {mediaKind === 'video'
                       ? 'Disponible solo para fotos.'
@@ -777,7 +777,7 @@ export default function PublicarPage() {
                         : backgroundRemoved
                           ? 'Fondo quitado. Esta version se usara para la revision y la publicacion.'
                           : removeBackground && !originalMediaFile
-                            ? 'Cuando subas una foto, la IA quitara el fondo antes de analizarla.'
+                            ? 'Cuando subas una foto, IS95 quitara el fondo antes de analizarla.'
                             : 'Ideal para publicar ropas y productos sobre fondo limpio.'}
                   </span>
                 </span>
@@ -791,7 +791,7 @@ export default function PublicarPage() {
               className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {analyzing || removingBackground ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-              {removingBackground ? 'Quitando fondo...' : analyzing ? 'Analizando...' : 'Generar texto con IA'}
+              {removingBackground ? 'Quitando fondo...' : analyzing ? 'Analizando...' : 'Generar texto con IS95'}
             </button>
 
             <div>
@@ -881,7 +881,7 @@ export default function PublicarPage() {
               disabled={submitting || preparingMedia || reviewingMedia || removingBackground}
             >
               {reviewingMedia || submitting || removingBackground ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-              {removingBackground ? 'Quitando fondo...' : reviewingMedia ? 'Revisando con IA...' : submitting ? 'Publicando...' : 'Publicar ahora'}
+              {removingBackground ? 'Quitando fondo...' : reviewingMedia ? 'Revisando con IS95...' : submitting ? 'Publicando...' : 'Publicar ahora'}
             </button>
           </form>
         </section>
@@ -890,7 +890,7 @@ export default function PublicarPage() {
           <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-soft">
             <div className="flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-accent" />
-              <h2 className="text-lg font-semibold text-slate-950">Asistente IA</h2>
+              <h2 className="text-lg font-semibold text-slate-950">Asistente IS95</h2>
             </div>
             <p className="mt-3 text-sm leading-6 text-slate-600">La sugerencia se genera desde la foto o un fotograma del video. Luego podes editar todo antes de publicar.</p>
           </div>
