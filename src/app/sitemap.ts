@@ -35,6 +35,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'monthly',
       priority: 0.6
     },
+    {
+      url: `${appUrl}/privacidad`,
+      lastModified: now,
+      changeFrequency: 'yearly',
+      priority: 0.3
+    },
+    {
+      url: `${appUrl}/eliminar-cuenta`,
+      lastModified: now,
+      changeFrequency: 'yearly',
+      priority: 0.3
+    },
     ...comercios.map((comercio) => ({
       url: `${appUrl}/comercios/${encodeURIComponent(comercio.id)}`,
       lastModified: getLastModified(comercio.creadoEn),

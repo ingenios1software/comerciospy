@@ -56,6 +56,17 @@ npm run start
 
 En desarrollo (`npm run dev`) el service worker no se registra para evitar cache de trabajo local.
 
+## Android y Google Play
+
+La carpeta `android/` contiene el proyecto Trusted Web Activity separado, con package ID `py.comerciospy.app`.
+
+- La configuracion principal esta en `android/twa-manifest.json`.
+- La politica publica esta disponible en `/privacidad`.
+- La solicitud publica de eliminacion de cuenta esta disponible en `/eliminar-cuenta`.
+- La llave de firma definitiva y `assetlinks.json` se agregan recien antes de publicar.
+
+Ver `android/README.md` para compilar y completar la publicacion.
+
 ## Variables de entorno
 
 Variables requeridas en Vercel:
