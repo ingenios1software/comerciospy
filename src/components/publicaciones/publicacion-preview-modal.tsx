@@ -75,7 +75,6 @@ export function PublicacionPreviewModal({
 
   const mediaUrl = getPublicationMediaUrl(activePublicacion);
   const isVideo = activePublicacion.mediaType === 'video' && Boolean(mediaUrl);
-  const mediaLabel = isVideo ? 'video' : 'foto';
   const publicationCode = getPublicationCode(activePublicacion);
   const publicationHref = getPublicationHref(activePublicacion);
   const appOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://comerciospy.vercel.app';
@@ -281,10 +280,10 @@ export function PublicacionPreviewModal({
           )}
           {mediaUrl ? (
             <ShareMediaButton
-              url={mediaUrl}
-              title={activePublicacion.titulo}
-              text={`Mira esta ${mediaLabel} de ${activePublicacion.titulo} en ComerciosPY.`}
-              label={`Compartir ${mediaLabel} de ${activePublicacion.titulo}`}
+              url={publicationHref}
+              title="ComerciosPY"
+              text="Mira este articulo en ComerciosPY."
+              label={`Compartir articulo: ${activePublicacion.titulo}`}
               className="absolute right-3 top-3 sm:right-4 sm:top-4"
             />
           ) : null}

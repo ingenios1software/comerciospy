@@ -12,7 +12,7 @@ import { likePublication } from '@/lib/publication-engagement';
 import { isSubscriptionExpired } from '@/lib/subscription';
 import type { Comercio, Publicacion } from '@/types';
 import { buildWhatsappUrl, formatPrice } from '@/lib/utils/format';
-import { buildPublicationWhatsappMessage, getPublicationCode, getPublicationHref, getPublicationMediaUrl } from '@/lib/publications';
+import { buildPublicationWhatsappMessage, getPublicationAnchorId, getPublicationCode, getPublicationHref, getPublicationMediaUrl } from '@/lib/publications';
 
 type PublicacionCardProps = {
   publicacion: Publicacion;
@@ -31,7 +31,6 @@ export function PublicacionCard({ publicacion, comercio, onMarkSold, markingSold
   const [markSoldError, setMarkSoldError] = useState('');
   const mediaUrl = getPublicationMediaUrl(publicacion);
   const isVideo = publicacion.mediaType === 'video' && Boolean(mediaUrl);
-  const mediaLabel = isVideo ? 'video' : 'foto';
   const compact = variant === 'compact';
   const publicationCode = getPublicationCode(publicacion);
   const publicationHref = getPublicationHref(publicacion);
@@ -97,7 +96,7 @@ export function PublicacionCard({ publicacion, comercio, onMarkSold, markingSold
 
   return (
     <>
-      <article className={`overflow-hidden border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-soft ${compact ? 'rounded-md' : 'rounded-2xl'}`}>
+      <article id={getPublicationAnchorId(publicacion)} className={`scroll-mt-24 overflow-hidden border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-soft ${compact ? 'rounded-md' : 'rounded-2xl'}`}>
         <div className={`relative overflow-hidden bg-slate-100 ${compact ? 'aspect-square' : 'aspect-[4/3]'}`}>
           {isVideo ? (
             <button
@@ -155,10 +154,10 @@ export function PublicacionCard({ publicacion, comercio, onMarkSold, markingSold
           </div>
           {mediaUrl ? (
             <ShareMediaButton
-              url={mediaUrl}
-              title={publicacion.titulo}
-              text={`Mira esta ${mediaLabel} de ${publicacion.titulo} en ComerciosPY.`}
-              label={`Compartir ${mediaLabel} de ${publicacion.titulo}`}
+              url={publicationHref}
+              title="ComerciosPY"
+              text="Mira este articulo en ComerciosPY."
+              label={`Compartir articulo: ${publicacion.titulo}`}
               className={compact ? 'absolute bottom-1 right-1' : 'absolute bottom-2 right-2'}
             />
           ) : null}

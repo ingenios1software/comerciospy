@@ -7,13 +7,17 @@ export function getPublicationMediaUrl(publicacion: Publicacion) {
   return publicacion.mediaUrl || publicacion.imagenUrl || '';
 }
 
-export function getPublicationCode(publicacion: Publicacion) {
+export function getPublicationCode(publicacion: Pick<Publicacion, 'id'>) {
   const cleanId = publicacion.id.replace(/[^a-z0-9]/gi, '').slice(0, 8).toUpperCase();
   return cleanId || publicacion.id.slice(0, 8).toUpperCase();
 }
 
+export function getPublicationAnchorId(publicacion: Pick<Publicacion, 'id'>) {
+  return `p-${getPublicationCode(publicacion)}`;
+}
+
 export function getPublicationHref(publicacion: Publicacion) {
-  return `/comercios/${publicacion.comercioId}#publicaciones`;
+  return `/comercios/${publicacion.comercioId}#${getPublicationAnchorId(publicacion)}`;
 }
 
 export function buildPublicationWhatsappMessage(publicacion: Publicacion, comercio?: CommerceContact, appOrigin = 'https://comerciospy.vercel.app') {
