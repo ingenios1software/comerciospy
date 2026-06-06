@@ -174,7 +174,7 @@ export default function Home() {
     <main className="min-h-screen overflow-x-hidden bg-[#ededed] pb-24 pt-[68px] text-slate-950 sm:pt-[70px]">
       <section className="bg-[linear-gradient(180deg,#dc2626_0%,#b91c1c_100%)] text-white">
         <div className="mx-auto max-w-7xl px-3 pb-8 pt-2 sm:px-5 sm:pb-12 sm:pt-5">
-          <div className="grid gap-3 lg:grid-cols-[1fr_320px] lg:items-end">
+          <div>
             <div>
               <p className="hidden text-[10px] font-black uppercase tracking-[0.2em] text-red-100 sm:block">ComerciosPY</p>
               <h1 className="hidden max-w-[340px] text-[24px] font-black leading-[1.04] sm:mt-2 sm:block sm:max-w-3xl sm:text-4xl">
@@ -225,19 +225,6 @@ export default function Home() {
                 ))}
               </div>
             </div>
-
-            <div className="hidden max-w-full grid-cols-3 gap-2 rounded-md bg-white/12 p-2 ring-1 ring-white/15 sm:grid">
-              {[
-                { label: 'Comercios', value: visibleComercios.length },
-                { label: 'Ciudades', value: cityOptions.length },
-                { label: 'Avisos', value: visiblePublicaciones.length }
-              ].map((item) => (
-                <div key={item.label} className="min-w-0 rounded-md bg-white px-2 py-2 text-center text-slate-950">
-                  <p className="text-lg font-black leading-none">{item.value}</p>
-                  <p className="mt-1 text-[9px] font-bold uppercase text-slate-500">{item.label}</p>
-                </div>
-              ))}
-            </div>
           </div>
         </div>
       </section>
@@ -246,13 +233,17 @@ export default function Home() {
         <section id="publicaciones" className="space-y-2">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <h2 className="text-[17px] font-black text-slate-950">Recien publicado</h2>
-              <p className="text-[11px] font-semibold text-slate-500">Fotos, ofertas y articulos listos para consultar.</p>
+              <h2 className="inline-flex items-center gap-1.5 rounded-md bg-amber-300 px-2.5 py-1.5 text-[16px] font-black text-slate-950 shadow-sm ring-1 ring-amber-400">
+                <BadgePercent className="h-4 w-4 text-accent" />
+                Recien publicado
+              </h2>
+              <p className="mt-1 text-[11px] font-semibold text-slate-600">Fotos, ofertas y articulos listos para consultar.</p>
             </div>
             <Link
               href="/login"
-              className="rounded-md bg-slate-950 px-3 py-2 text-[11px] font-bold text-white shadow-sm transition hover:bg-slate-800"
+              className="inline-flex items-center gap-1.5 rounded-md bg-accent px-3 py-2.5 text-[11px] font-black text-white shadow-[0_8px_18px_rgba(185,28,28,0.28)] ring-1 ring-red-700 transition hover:bg-red-700"
             >
+              <Store className="h-3.5 w-3.5" />
               Soy comercio
             </Link>
           </div>

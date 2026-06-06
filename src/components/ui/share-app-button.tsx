@@ -6,13 +6,15 @@ import { appShareText, appShareTitle, getAppShareUrl, getAppWhatsappShareUrl } f
 
 type ShareAppButtonProps = {
   mode?: 'button' | 'panel';
+  compact?: boolean;
+  inverted?: boolean;
 };
 
 type NavigatorWithShare = Navigator & {
   canShare?: (data: ShareData) => boolean;
 };
 
-export function ShareAppButton({ mode = 'button' }: ShareAppButtonProps) {
+export function ShareAppButton({ mode = 'button', compact = false, inverted = false }: ShareAppButtonProps) {
   const [copied, setCopied] = useState(false);
   const appUrl = useMemo(() => getAppShareUrl(), []);
   const whatsappUrl = useMemo(() => getAppWhatsappShareUrl(), []);
@@ -67,10 +69,16 @@ export function ShareAppButton({ mode = 'button' }: ShareAppButtonProps) {
     <button
       type="button"
       onClick={shareApp}
-      className="inline-flex h-8 items-center gap-2 rounded-md bg-slate-100 px-2.5 text-[12px] font-bold text-slate-700 transition hover:bg-slate-200"
+      aria-label={copied ? 'Link de ComerciosPY copiado' : 'Compartir ComerciosPY'}
+      title={copied ? 'Link copiado' : 'Compartir ComerciosPY'}
+      className={`inline-flex h-8 items-center justify-center gap-2 rounded-md text-[12px] font-bold transition ${
+        inverted
+          ? 'bg-white/15 text-white ring-1 ring-white/20 hover:bg-white/25'
+          : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+      } ${compact ? 'w-8' : 'px-2.5'}`}
     >
       {copied ? <Check className="h-4 w-4" /> : <Share2 className="h-4 w-4" />}
-      {copied ? 'Copiado' : 'Compartir'}
+      {compact ? null : copied ? 'Copiado' : 'Compartir'}
     </button>
   );
 }
