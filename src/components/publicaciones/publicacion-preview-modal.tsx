@@ -4,6 +4,7 @@ import { type FormEvent, type TouchEvent, useCallback, useEffect, useMemo, useRe
 import { CheckCircle2, ChevronLeft, ChevronRight, Heart, Loader2, MessageCircle, Send, X } from 'lucide-react';
 import { CartButton } from '@/components/cart/cart-button';
 import { FavoriteButton } from '@/components/favorites/favorite-button';
+import { ShareMediaButton } from '@/components/ui/share-media-button';
 import {
   addPublicationComment,
   getPublicationEngagement,
@@ -74,6 +75,7 @@ export function PublicacionPreviewModal({
 
   const mediaUrl = getPublicationMediaUrl(activePublicacion);
   const isVideo = activePublicacion.mediaType === 'video' && Boolean(mediaUrl);
+  const mediaLabel = isVideo ? 'video' : 'foto';
   const publicationCode = getPublicationCode(activePublicacion);
   const publicationHref = getPublicationHref(activePublicacion);
   const appOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://comerciospy.vercel.app';
@@ -277,6 +279,15 @@ export function PublicacionPreviewModal({
           ) : (
             <div className="flex min-h-72 items-center justify-center text-sm font-semibold text-slate-400">Sin imagen</div>
           )}
+          {mediaUrl ? (
+            <ShareMediaButton
+              url={mediaUrl}
+              title={activePublicacion.titulo}
+              text={`Mira esta ${mediaLabel} de ${activePublicacion.titulo} en ComerciosPY.`}
+              label={`Compartir ${mediaLabel} de ${activePublicacion.titulo}`}
+              className="absolute right-3 top-3 sm:right-4 sm:top-4"
+            />
+          ) : null}
           {canNavigate ? (
             <>
               <button

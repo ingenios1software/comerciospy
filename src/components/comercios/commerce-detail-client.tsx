@@ -7,6 +7,7 @@ import { getComercioById, getPublicationsByCommerce, trackCommerceMetric } from 
 import { PublicacionCard } from '@/components/publicaciones/publicacion-card';
 import { DigitalBusinessCard } from '@/components/comercios/digital-business-card';
 import { ImageLightbox, type LightboxImage } from '@/components/ui/image-lightbox';
+import { ShareMediaButton } from '@/components/ui/share-media-button';
 import { sampleComercios, samplePublicaciones } from '@/lib/mockData';
 import { isCommercePubliclyVisible } from '@/lib/subscription';
 import { buildMapsUrl, buildWhatsappUrl, cleanPhone } from '@/lib/utils/format';
@@ -162,6 +163,16 @@ export function CommerceDetailClient({ commerceId, initialComercio, initialPubli
               <img src={comercio.portadaUrl} alt={comercio.nombre} className="h-full w-full object-cover" />
             </button>
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/20 to-transparent" />
+            {comercio.portadaUrl ? (
+              <ShareMediaButton
+                url={comercio.portadaUrl}
+                title={`${comercio.nombre} portada`}
+                text={`Te comparto esta foto de ${comercio.nombre} en ComerciosPY.`}
+                label={`Compartir portada de ${comercio.nombre}`}
+                onShared={() => trackCommerceMetric(comercio.id, 'compartidos')}
+                className="absolute right-3 top-3 z-10 sm:right-5 sm:top-5"
+              />
+            ) : null}
             <div className="absolute inset-x-0 bottom-0 p-5 text-white sm:p-8">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-slate-950">{comercio.categoria}</span>
@@ -203,15 +214,24 @@ export function CommerceDetailClient({ commerceId, initialComercio, initialPubli
                   <h2 className="text-xl font-semibold text-slate-950">Fotos</h2>
                   <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-6">
                     {gallery.map((image, index) => (
-                      <button
-                        type="button"
-                        key={`${image}-${index}`}
-                        onClick={() => setActiveGalleryIndex(index)}
-                        className="group aspect-square cursor-zoom-in overflow-hidden rounded-2xl bg-slate-100 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
-                        aria-label={`Ampliar ${index === 0 ? 'portada' : `foto ${index + 1}`} de ${comercio.nombre}`}
-                      >
-                        <img src={image} alt={`${comercio.nombre} foto ${index + 1}`} className="h-full w-full object-cover transition duration-300 group-hover:scale-105" />
-                      </button>
+                      <div key={`${image}-${index}`} className="group relative aspect-square overflow-hidden rounded-2xl bg-slate-100">
+                        <button
+                          type="button"
+                          onClick={() => setActiveGalleryIndex(index)}
+                          className="h-full w-full cursor-zoom-in focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent"
+                          aria-label={`Ampliar ${index === 0 ? 'portada' : `foto ${index + 1}`} de ${comercio.nombre}`}
+                        >
+                          <img src={image} alt={`${comercio.nombre} foto ${index + 1}`} className="h-full w-full object-cover transition duration-300 group-hover:scale-105" />
+                        </button>
+                        <ShareMediaButton
+                          url={image}
+                          title={`${comercio.nombre} ${index === 0 ? 'portada' : `foto ${index + 1}`}`}
+                          text={`Te comparto esta foto de ${comercio.nombre} en ComerciosPY.`}
+                          label={`Compartir ${index === 0 ? 'portada' : `foto ${index + 1}`} de ${comercio.nombre}`}
+                          onShared={() => trackCommerceMetric(comercio.id, 'compartidos')}
+                          className="absolute right-1.5 top-1.5"
+                        />
+                      </div>
                     ))}
                   </div>
                 </div>

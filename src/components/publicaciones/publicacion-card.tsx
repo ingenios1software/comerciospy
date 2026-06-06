@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react';
 import { CartButton } from '@/components/cart/cart-button';
 import { FavoriteButton } from '@/components/favorites/favorite-button';
 import { PublicacionPreviewModal, type PublicationPreviewItem } from '@/components/publicaciones/publicacion-preview-modal';
+import { ShareMediaButton } from '@/components/ui/share-media-button';
 import { useAuth } from '@/lib/firebase/auth-context';
 import { markPublicationAsSold } from '@/lib/firebase/firestore';
 import { likePublication } from '@/lib/publication-engagement';
@@ -30,6 +31,7 @@ export function PublicacionCard({ publicacion, comercio, onMarkSold, markingSold
   const [markSoldError, setMarkSoldError] = useState('');
   const mediaUrl = getPublicationMediaUrl(publicacion);
   const isVideo = publicacion.mediaType === 'video' && Boolean(mediaUrl);
+  const mediaLabel = isVideo ? 'video' : 'foto';
   const compact = variant === 'compact';
   const publicationCode = getPublicationCode(publicacion);
   const publicationHref = getPublicationHref(publicacion);
@@ -151,6 +153,15 @@ export function PublicacionCard({ publicacion, comercio, onMarkSold, markingSold
               </a>
             ) : null}
           </div>
+          {mediaUrl ? (
+            <ShareMediaButton
+              url={mediaUrl}
+              title={publicacion.titulo}
+              text={`Mira esta ${mediaLabel} de ${publicacion.titulo} en ComerciosPY.`}
+              label={`Compartir ${mediaLabel} de ${publicacion.titulo}`}
+              className={compact ? 'absolute bottom-1 right-1' : 'absolute bottom-2 right-2'}
+            />
+          ) : null}
         </div>
         <div className={compact ? 'space-y-1.5 p-2' : 'space-y-3 p-4'}>
           <div className={`flex items-center justify-between gap-2 font-semibold ${compact ? 'text-[10px]' : 'text-xs'}`}>

@@ -2,6 +2,7 @@
 
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { useEffect } from 'react';
+import { ShareMediaButton } from '@/components/ui/share-media-button';
 
 export type LightboxImage = {
   src: string;
@@ -72,6 +73,14 @@ export function ImageLightbox({ images, activeIndex, onChange, onClose }: ImageL
       >
         <X className="h-5 w-5" />
       </button>
+      <ShareMediaButton
+        url={activeImage.src}
+        title={activeImage.alt}
+        text="Te comparto esta foto de ComerciosPY."
+        label={`Compartir ${activeImage.alt}`}
+        compact={false}
+        className="absolute left-3 top-3 sm:left-5 sm:top-5"
+      />
 
       {hasManyImages ? (
         <>
