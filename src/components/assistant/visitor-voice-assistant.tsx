@@ -5,8 +5,9 @@ import { Bot, Loader2, Mic, MicOff, Search, Volume2, X } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/lib/firebase/auth-context';
-import { getAllComercios } from '@/lib/firebase/firestore';
-import type { Comercio } from '@/types';
+import { getAllComercios, getAllPublications } from '@/lib/firebase/firestore';
+import { getCommerceSearchMatchLabel, getSearchTerms, scoreCommerceSearch } from '@/lib/search';
+import type { Comercio, Publicacion } from '@/types';
 
 type SpeechRecognitionResultLike = {
   isFinal: boolean;
@@ -44,102 +45,22 @@ type WindowWithSpeech = Window & {
   webkitSpeechRecognition?: SpeechRecognitionConstructor;
 };
 
-const stopWords = new Set([
-  'busco',
-  'buscar',
-  'quiero',
-  'necesito',
-  'encontrar',
-  'encuentra',
-  'mostrame',
-  'muestrame',
-  'donde',
-  'hay',
-  'un',
-  'una',
-  'unos',
-  'unas',
-  'el',
-  'la',
-  'los',
-  'las',
-  'de',
-  'del',
-  'para',
-  'por',
-  'favor',
-  'en',
-  'cerca',
-  'comercio',
-  'negocio',
-  'servicio'
-]);
+type VoiceSearchResult = {
+  comercio: Comercio;
+  matchLabel: string;
+};
 
-function normalizeText(value: string) {
-  return value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function getSearchTerms(query: string) {
-  const normalized = normalizeText(query);
-  const terms = normalized.split(' ').filter((term) => term.length > 1 && !stopWords.has(term));
-
-  return terms.length > 0 ? terms : normalized.split(' ').filter(Boolean);
-}
-
-function commerceSearchText(comercio: Comercio) {
-  return normalizeText(
-    [
-      comercio.nombre,
-      comercio.rubro,
-      comercio.categoria,
-      comercio.descripcion,
-      comercio.resumen,
-      comercio.ciudad,
-      comercio.direccion,
-      comercio.telefono,
-      comercio.whatsapp,
-      ...(comercio.servicios ?? [])
-    ].join(' ')
-  );
-}
-
-function scoreCommerce(comercio: Comercio, query: string) {
-  const normalizedQuery = normalizeText(query);
-  const terms = getSearchTerms(query);
-  const searchText = commerceSearchText(comercio);
-  let score = 0;
-
-  if (!terms.length) return 0;
-
-  for (const term of terms) {
-    if (searchText.includes(term)) score += 2;
-    if (normalizeText(comercio.nombre).includes(term)) score += 2;
-    if (normalizeText(comercio.ciudad).includes(term)) score += 2;
-    if (normalizeText(comercio.categoria).includes(term)) score += 1;
-  }
-
-  if (normalizedQuery && searchText.includes(normalizedQuery)) score += 5;
-
-  return score;
-}
-
-function getSpokenSummary(results: Comercio[], query: string) {
+function getSpokenSummary(results: VoiceSearchResult[], query: string) {
   if (results.length === 0) {
     return `No encontre comercios publicados para ${query}. Podes probar con otra palabra o ciudad.`;
   }
 
   const [first, second] = results;
   if (second) {
-    return `Encontre ${results.length} opciones. Las mejores son ${first.nombre} en ${first.ciudad} y ${second.nombre} en ${second.ciudad}.`;
+    return `Encontre ${results.length} opciones. Las mejores son ${first.comercio.nombre} en ${first.comercio.ciudad} y ${second.comercio.nombre} en ${second.comercio.ciudad}.`;
   }
 
-  return `Encontre ${first.nombre} en ${first.ciudad}. Podes abrir su ficha para ver WhatsApp, ubicacion y horario.`;
+  return `Encontre ${first.comercio.nombre} en ${first.comercio.ciudad}. Podes abrir su ficha para ver WhatsApp, ubicacion y horario.`;
 }
 
 function useSpeechSupport() {
@@ -162,34 +83,40 @@ export function VisitorVoiceAssistant() {
   const [isOpen, setIsOpen] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [comercios, setComercios] = useState<Comercio[]>([]);
-  const [loadingComercios, setLoadingComercios] = useState(false);
+  const [publicaciones, setPublicaciones] = useState<Publicacion[]>([]);
+  const [loadingData, setLoadingData] = useState(false);
   const [query, setQuery] = useState('');
   const [answer, setAnswer] = useState('Decime que queres encontrar.');
-  const [results, setResults] = useState<Comercio[]>([]);
+  const [results, setResults] = useState<VoiceSearchResult[]>([]);
 
   const shouldShow = !authLoading && (pathname === '/' || pathname.startsWith('/comercios'));
 
   useEffect(() => {
-    if (!shouldShow || comercios.length > 0 || loadingComercios) return;
+    if (!shouldShow || comercios.length > 0 || loadingData) return;
 
-    const loadComercios = async () => {
-      setLoadingComercios(true);
-      try {
-        const data = await getAllComercios();
-        setComercios(data);
-      } catch {
-        setComercios([]);
-      } finally {
-        setLoadingComercios(false);
-      }
+    const loadSearchData = async () => {
+      setLoadingData(true);
+      const [commerceResult, publicationResult] = await Promise.allSettled([getAllComercios(), getAllPublications()]);
+      setComercios(commerceResult.status === 'fulfilled' ? commerceResult.value : []);
+      setPublicaciones(publicationResult.status === 'fulfilled' ? publicationResult.value : []);
+      setLoadingData(false);
     };
 
-    loadComercios();
-  }, [comercios.length, loadingComercios, shouldShow]);
+    loadSearchData();
+  }, [comercios.length, loadingData, shouldShow]);
+
+  const publicacionesByCommerceId = useMemo(() => {
+    return publicaciones.reduce((map, publicacion) => {
+      const current = map.get(publicacion.comercioId) ?? [];
+      current.push(publicacion);
+      map.set(publicacion.comercioId, current);
+      return map;
+    }, new Map<string, Publicacion[]>());
+  }, [publicaciones]);
 
   const exampleText = useMemo(() => {
     const city = comercios[0]?.ciudad || 'tu ciudad';
-    return `Ej: "busco farmacia en ${city}"`;
+    return `Ej: "busco ropa en ${city}"`;
   }, [comercios]);
 
   const speak = (text: string) => {
@@ -209,10 +136,16 @@ export function VisitorVoiceAssistant() {
     setQuery(cleanQuery);
 
     const ranked = comercios
-      .map((comercio) => ({ comercio, score: scoreCommerce(comercio, cleanQuery) }))
+      .map((comercio) => {
+        const commercePublications = publicacionesByCommerceId.get(comercio.id) ?? [];
+        return {
+          comercio,
+          score: scoreCommerceSearch(comercio, cleanQuery, commercePublications),
+          matchLabel: getCommerceSearchMatchLabel(comercio, cleanQuery, commercePublications)
+        };
+      })
       .filter((item) => item.score > 0)
       .sort((a, b) => b.score - a.score)
-      .map((item) => item.comercio)
       .slice(0, 3);
     const nextAnswer = getSpokenSummary(ranked, cleanQuery);
 
@@ -295,7 +228,7 @@ export function VisitorVoiceAssistant() {
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder={exampleText}
+              placeholder={comercios.length > 0 ? exampleText : 'Comercio, ciudad, categoria, rubro, contacto o articulo'}
               className="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-950 outline-none transition focus:border-accent focus:bg-white focus:ring-2 focus:ring-red-100"
             />
             <button
@@ -303,7 +236,7 @@ export function VisitorVoiceAssistant() {
               className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-950 text-white transition hover:bg-slate-800"
               aria-label="Buscar"
             >
-              {loadingComercios ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+              {loadingData ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
             </button>
           </form>
 
@@ -334,7 +267,7 @@ export function VisitorVoiceAssistant() {
 
           {results.length > 0 ? (
             <div className="mt-3 space-y-2">
-              {results.map((comercio) => (
+              {results.map(({ comercio, matchLabel }) => (
                 <Link
                   key={comercio.id}
                   href={`/comercios/${comercio.id}`}
@@ -344,6 +277,7 @@ export function VisitorVoiceAssistant() {
                   <span className="mt-1 block truncate text-xs text-slate-500">
                     {comercio.rubro} - {comercio.ciudad}
                   </span>
+                  <span className="mt-1 block truncate text-[11px] font-semibold text-accent">{matchLabel}</span>
                 </Link>
               ))}
             </div>

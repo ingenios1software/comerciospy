@@ -33,6 +33,15 @@ const stopWords = new Set([
   'negocio',
   'servicio',
   'servicios',
+  'contacto',
+  'nombre',
+  'articulo',
+  'articulos',
+  'categoria',
+  'categorias',
+  'rubro',
+  'rubros',
+  'ciudad',
   'y'
 ]);
 
@@ -86,6 +95,11 @@ function getPublicationSearchValues(publicacion: Publicacion) {
   ];
 }
 
+function termsMatchValue(terms: string[], value: SearchValue) {
+  const normalizedValue = normalizeSearchText(value);
+  return terms.length > 0 && terms.every((term) => normalizedValue.includes(term));
+}
+
 export function buildCommerceSearchText(comercio: Comercio, publicaciones: Publicacion[] = []) {
   return normalizeSearchText([
     comercio.nombre,
@@ -113,4 +127,50 @@ export function matchesCommerceSearch(comercio: Comercio, query: string, publica
   if (searchText.includes(normalizedQuery)) return true;
 
   return getSearchTerms(normalizedQuery).every((term) => searchText.includes(term));
+}
+
+export function scoreCommerceSearch(comercio: Comercio, query: string, publicaciones: Publicacion[] = []) {
+  const normalizedQuery = normalizeSearchText(query);
+  const terms = getSearchTerms(query);
+
+  if (!normalizedQuery || !terms.length || !matchesCommerceSearch(comercio, query, publicaciones)) return 0;
+
+  const weightedValues: Array<{ value: SearchValue; weight: number }> = [
+    { value: comercio.nombre, weight: 12 },
+    { value: comercio.contactoNombre, weight: 10 },
+    { value: comercio.ciudad, weight: 8 },
+    { value: comercio.rubro, weight: 8 },
+    { value: [comercio.categoria, getCategorySearchValues(comercio.categoria)], weight: 7 },
+    { value: comercio.servicios, weight: 6 },
+    { value: [comercio.descripcion, comercio.resumen], weight: 3 },
+    ...publicaciones.flatMap((publicacion) => [
+      { value: publicacion.titulo, weight: 10 },
+      { value: [publicacion.categoria, publicacion.tipo, getCategorySearchValues(publicacion.categoria)], weight: 7 },
+      { value: publicacion.descripcion, weight: 4 }
+    ])
+  ];
+
+  const score = weightedValues.reduce((total, item) => {
+    const normalizedValue = normalizeSearchText(item.value);
+    const termMatches = terms.filter((term) => normalizedValue.includes(term)).length;
+    const exactBonus = normalizedValue.includes(normalizedQuery) ? item.weight * 2 : 0;
+    return total + termMatches * item.weight + exactBonus;
+  }, 0);
+
+  return score + terms.length;
+}
+
+export function getCommerceSearchMatchLabel(comercio: Comercio, query: string, publicaciones: Publicacion[] = []) {
+  const terms = getSearchTerms(query);
+  const matchedPublication = publicaciones.find((publicacion) => termsMatchValue(terms, getPublicationSearchValues(publicacion)));
+
+  if (matchedPublication) return `Articulo: ${matchedPublication.titulo}`;
+  if (termsMatchValue(terms, comercio.nombre)) return `Comercio: ${comercio.nombre}`;
+  if (termsMatchValue(terms, comercio.contactoNombre)) return `Contacto: ${comercio.contactoNombre}`;
+  if (termsMatchValue(terms, comercio.ciudad)) return `Ciudad: ${comercio.ciudad}`;
+  if (termsMatchValue(terms, comercio.rubro)) return `Rubro: ${comercio.rubro}`;
+  if (termsMatchValue(terms, [comercio.categoria, getCategorySearchValues(comercio.categoria)])) return `Categoria: ${comercio.categoria}`;
+  if (termsMatchValue(terms, comercio.servicios)) return `Servicio relacionado`;
+
+  return `${comercio.rubro} - ${comercio.ciudad}`;
 }
