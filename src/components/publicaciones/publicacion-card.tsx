@@ -127,6 +127,7 @@ export function PublicacionCard({ publicacion, comercio, onMarkSold, markingSold
             <div className="flex min-w-0 items-center gap-1">
               <FavoriteButton
                 compact={compact}
+                minimal
                 item={{
                   kind: 'publicacion',
                   id: publicacion.id,
@@ -137,7 +138,7 @@ export function PublicacionCard({ publicacion, comercio, onMarkSold, markingSold
                 }}
                 onFavoriteAdded={() => void likePublication(publicacion.id)}
               />
-              <CartButton item={cartItem} compact />
+              <CartButton item={cartItem} compact minimal />
             </div>
             {whatsappUrl !== '#' ? (
               <a
@@ -158,6 +159,7 @@ export function PublicacionCard({ publicacion, comercio, onMarkSold, markingSold
               title="ComerciosPY"
               text="Mira este articulo en ComerciosPY."
               label={`Compartir articulo: ${publicacion.titulo}`}
+              minimal
               className={compact ? 'absolute bottom-1 right-1' : 'absolute bottom-2 right-2'}
             />
           ) : null}

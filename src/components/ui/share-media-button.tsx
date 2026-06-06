@@ -13,6 +13,7 @@ type ShareMediaButtonProps = {
   text?: string;
   label?: string;
   compact?: boolean;
+  minimal?: boolean;
   className?: string;
   onShared?: () => void | Promise<void>;
 };
@@ -33,6 +34,7 @@ export function ShareMediaButton({
   text,
   label = 'Compartir foto',
   compact = true,
+  minimal = false,
   className = '',
   onShared
 }: ShareMediaButtonProps) {
@@ -75,9 +77,17 @@ export function ShareMediaButton({
       onClick={handleShare}
       aria-label={copied ? 'Link copiado' : label}
       title={copied ? 'Link copiado' : label}
-      className={`inline-flex items-center justify-center rounded-md bg-white/95 text-slate-700 shadow-sm ring-1 ring-slate-200 transition hover:bg-slate-50 hover:text-slate-950 focus:outline-none focus:ring-2 focus:ring-accent active:scale-[0.98] ${compact ? 'h-8 w-8' : 'h-10 w-10'} ${className}`}
+      className={`inline-flex items-center justify-center rounded-md transition focus:outline-none focus-visible:ring-2 active:scale-[0.96] ${
+        minimal
+          ? 'h-8 w-8 bg-transparent text-white hover:text-sky-200 focus-visible:ring-white'
+          : `bg-white/95 text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 hover:text-slate-950 focus-visible:ring-accent ${compact ? 'h-8 w-8' : 'h-10 w-10'}`
+      } ${className}`}
     >
-      {copied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Share2 className={compact ? 'h-3.5 w-3.5' : 'h-4 w-4'} />}
+      {copied ? (
+        <Check className={`${minimal ? 'h-[18px] w-[18px] drop-shadow-[0_1px_2px_rgba(15,23,42,0.95)]' : 'h-3.5 w-3.5'} text-emerald-400`} />
+      ) : (
+        <Share2 className={minimal ? 'h-[18px] w-[18px] drop-shadow-[0_1px_2px_rgba(15,23,42,0.95)]' : compact ? 'h-3.5 w-3.5' : 'h-4 w-4'} />
+      )}
     </button>
   );
 }
