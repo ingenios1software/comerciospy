@@ -23,7 +23,7 @@ export default function LoginPage() {
 
     try {
       await signInUser(email, password);
-      router.replace('/dashboard');
+      router.replace('/');
     } catch (loginError) {
       setError(getAuthErrorMessage(loginError));
     } finally {

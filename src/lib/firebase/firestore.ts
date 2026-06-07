@@ -63,25 +63,37 @@ function isPublicationPubliclyVisible(publicacion: Publicacion) {
   return publicacion.moderacionEstado !== 'pending' && publicacion.moderacionEstado !== 'rejected';
 }
 
+function sortPublicationsNewestFirst(publicaciones: Publicacion[]) {
+  const getCreatedAt = (publicacion: Publicacion) => {
+    const createdAt = new Date(publicacion.creadoEn).getTime();
+    return Number.isFinite(createdAt) ? createdAt : 0;
+  };
+
+  return [...publicaciones].sort((a, b) => getCreatedAt(b) - getCreatedAt(a) || b.id.localeCompare(a.id));
+}
+
 export async function getLatestPublications(limit = 10): Promise<Publicacion[]> {
   const [querySnapshot, comercios] = await Promise.all([getDocs(activePublicacionesQuery()), getAllComercios()]);
   const visibleCommerceIds = new Set(comercios.map((comercio) => comercio.id));
 
-  return querySnapshot.docs
-    .map((docItem) => docItem.data() as Publicacion)
-    .filter(isPublicationPubliclyVisible)
-    .filter((publicacion) => visibleCommerceIds.has(publicacion.comercioId))
-    .slice(0, limit);
+  return sortPublicationsNewestFirst(
+    querySnapshot.docs
+      .map((docItem) => docItem.data() as Publicacion)
+      .filter(isPublicationPubliclyVisible)
+      .filter((publicacion) => visibleCommerceIds.has(publicacion.comercioId))
+  ).slice(0, limit);
 }
 
 export async function getAllPublications(): Promise<Publicacion[]> {
   const [querySnapshot, comercios] = await Promise.all([getDocs(activePublicacionesQuery()), getAllComercios()]);
   const visibleCommerceIds = new Set(comercios.map((comercio) => comercio.id));
 
-  return querySnapshot.docs
-    .map((docItem) => docItem.data() as Publicacion)
-    .filter(isPublicationPubliclyVisible)
-    .filter((publicacion) => visibleCommerceIds.has(publicacion.comercioId));
+  return sortPublicationsNewestFirst(
+    querySnapshot.docs
+      .map((docItem) => docItem.data() as Publicacion)
+      .filter(isPublicationPubliclyVisible)
+      .filter((publicacion) => visibleCommerceIds.has(publicacion.comercioId))
+  );
 }
 
 export async function getAllPublicationsForAdmin(): Promise<Publicacion[]> {
@@ -96,7 +108,9 @@ export async function getPublicationsByCommerce(comercioId: string): Promise<Pub
     where('activo', '==', true)
   );
   const querySnapshot = await getDocs(publicacionesQuery);
-  return querySnapshot.docs.map((docItem) => docItem.data() as Publicacion).filter(isPublicationPubliclyVisible);
+  return sortPublicationsNewestFirst(
+    querySnapshot.docs.map((docItem) => docItem.data() as Publicacion).filter(isPublicationPubliclyVisible)
+  );
 }
 
 export async function getAllComercios(): Promise<Comercio[]> {
