@@ -247,7 +247,7 @@ export default function Home() {
               Soy comercio
             </Link>
           </div>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+          <div className="grid grid-flow-col grid-rows-2 gap-2 overflow-x-auto pb-2 scrollbar-none auto-cols-[155px] sm:auto-cols-[180px] lg:auto-cols-[190px]">
             {loadingPublicaciones ? (
               <p className="col-span-2 rounded-md border border-slate-200 bg-white p-3 text-[12px] font-semibold text-slate-500 shadow-sm sm:col-span-3 lg:col-span-4 xl:col-span-6">Cargando publicaciones...</p>
             ) : visiblePublicaciones.length > 0 ? (

@@ -325,7 +325,7 @@ export function PublicacionPreviewModal({
             <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
               <span className="rounded bg-red-50 px-2.5 py-1 uppercase text-accent ring-1 ring-red-100">{activePublicacion.tipo}</span>
               <span className="rounded bg-slate-100 px-2.5 py-1 text-slate-600">{activePublicacion.categoria}</span>
-              <span className="rounded bg-slate-100 px-2.5 py-1 text-slate-600">{formatPrice(activePublicacion.precio) || 'Consultar precio'}</span>
+              <span className="rounded bg-slate-100 px-2.5 py-1 text-slate-600">{formatPrice(activePublicacion.precio ?? 0)}</span>
             </div>
             <h2 className="mt-3 text-2xl font-semibold leading-tight text-slate-950">{activePublicacion.titulo}</h2>
             <p className="mt-3 whitespace-pre-line text-sm leading-7 text-slate-600">{activePublicacion.descripcion}</p>

@@ -22,10 +22,10 @@ export function getPublicationHref(publicacion: Publicacion) {
 
 export function buildPublicationWhatsappMessage(publicacion: Publicacion, comercio?: CommerceContact, appOrigin = 'https://comerciospy.vercel.app') {
   const code = getPublicationCode(publicacion);
-  const price = formatPrice(publicacion.precio);
+  const price = formatPrice(publicacion.precio ?? 0);
   const lines = [
     `Hola, quiero consultar por ${publicacion.titulo} (#${code}).`,
-    price ? `Precio: ${price}` : '',
+    `Precio: ${price}`,
     `${appOrigin}${getPublicationHref(publicacion)}`
   ].filter(Boolean);
 

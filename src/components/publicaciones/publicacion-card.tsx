@@ -1,15 +1,15 @@
 "use client";
 
 import Link from 'next/link';
-import { BadgePercent, CheckCircle2, MessageCircle, Store } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { BadgePercent, CheckCircle2, Heart, MessageCircle, Store } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 import { CartButton } from '@/components/cart/cart-button';
 import { FavoriteButton } from '@/components/favorites/favorite-button';
 import { PublicacionPreviewModal, type PublicationPreviewItem } from '@/components/publicaciones/publicacion-preview-modal';
 import { ShareMediaButton } from '@/components/ui/share-media-button';
 import { useAuth } from '@/lib/firebase/auth-context';
 import { markPublicationAsSold } from '@/lib/firebase/firestore';
-import { likePublication } from '@/lib/publication-engagement';
+import { getPublicationEngagement, likePublication } from '@/lib/publication-engagement';
 import { isSubscriptionExpired } from '@/lib/subscription';
 import type { Comercio, Publicacion } from '@/types';
 import { buildWhatsappUrl, formatPrice } from '@/lib/utils/format';
@@ -24,12 +24,22 @@ type PublicacionCardProps = {
   previewItems?: PublicationPreviewItem[];
 };
 
+function formatPublicationPrice(value?: number | null) {
+  return formatPrice(value ?? 0);
+}
+
+function formatBadgeCount(value: number) {
+  if (value > 99) return '99+';
+  return String(Math.max(0, value));
+}
+
 export function PublicacionCard({ publicacion, comercio, onMarkSold, markingSold = false, variant = 'default', previewItems }: PublicacionCardProps) {
   const { user, profile } = useAuth();
   const [activePreviewIndex, setActivePreviewIndex] = useState<number | null>(null);
   const [localMarkingSold, setLocalMarkingSold] = useState(false);
   const [soldLocally, setSoldLocally] = useState(false);
   const [markSoldError, setMarkSoldError] = useState('');
+  const [engagementSummary, setEngagementSummary] = useState({ likesCount: 0, commentsCount: 0 });
   const mediaUrl = getPublicationMediaUrl(publicacion);
   const isVideo = publicacion.mediaType === 'video' && Boolean(mediaUrl);
   const compact = variant === 'compact';
@@ -71,6 +81,38 @@ export function PublicacionCard({ publicacion, comercio, onMarkSold, markingSold
   const canMarkSold = canMarkSoldForPublication(publicacion);
   const canMarkSoldInPreview = modalPreviewItems.some((item) => canMarkSoldForPublication(item.publicacion));
   const isMarkingSold = markingSold || localMarkingSold;
+
+  useEffect(() => {
+    let active = true;
+
+    getPublicationEngagement(publicacion.id)
+      .then((data) => {
+        if (!active) return;
+        setEngagementSummary({
+          likesCount: data.likesCount,
+          commentsCount: data.commentsCount
+        });
+      })
+      .catch(() => undefined);
+
+    return () => {
+      active = false;
+    };
+  }, [publicacion.id]);
+
+  const handleFavoriteAdded = async () => {
+    try {
+      const result = await likePublication(publicacion.id);
+      if (result.added) {
+        setEngagementSummary((current) => ({
+          ...current,
+          likesCount: current.likesCount + 1
+        }));
+      }
+    } catch {
+      // The favorite still works locally if the public counter cannot be saved.
+    }
+  };
 
   const handleMarkSold = async (targetPublicacion = publicacion) => {
     setMarkSoldError('');
@@ -139,7 +181,7 @@ export function PublicacionCard({ publicacion, comercio, onMarkSold, markingSold
                   href: publicationHref,
                   imageUrl: mediaUrl
                 }}
-                onFavoriteAdded={() => void likePublication(publicacion.id)}
+                onFavoriteAdded={() => void handleFavoriteAdded()}
               />
               <CartButton item={cartItem} compact minimal />
             </div>
@@ -186,8 +228,18 @@ export function PublicacionCard({ publicacion, comercio, onMarkSold, markingSold
             <h3 className={`line-clamp-2 font-semibold text-slate-950 ${compact ? 'text-[12px] leading-4' : 'text-base'}`}>{publicacion.titulo}</h3>
             {compact ? null : <p className="mt-2 line-clamp-3 text-sm leading-6 text-slate-600">{publicacion.descripcion}</p>}
           </div>
+          <div className={`flex items-center gap-1.5 text-slate-600 ${compact ? 'text-[10px]' : 'text-xs'}`}>
+            <span className="relative inline-flex h-6 w-6 shrink-0 items-center justify-center text-accent" aria-label={`${engagementSummary.likesCount} me gusta`} role="img">
+              <Heart className="h-6 w-6 fill-white stroke-current" />
+              <span className="absolute inset-0 flex items-center justify-center pt-0.5 text-[8px] font-black leading-none">{formatBadgeCount(engagementSummary.likesCount)}</span>
+            </span>
+            <span className="relative inline-flex h-6 w-6 shrink-0 items-center justify-center text-slate-700" aria-label={`${engagementSummary.commentsCount} comentarios`} role="img">
+              <MessageCircle className="h-6 w-6 fill-white stroke-current" />
+              <span className="absolute inset-0 flex items-center justify-center pb-0.5 text-[8px] font-black leading-none">{formatBadgeCount(engagementSummary.commentsCount)}</span>
+            </span>
+          </div>
           <div className={`flex items-center justify-between gap-2 text-slate-500 ${compact ? 'text-[11px]' : 'text-sm'}`}>
-            <span className="truncate font-semibold text-slate-900">{formatPrice(publicacion.precio) || 'Consultar'}</span>
+            <span className="truncate font-semibold text-slate-900">{formatPublicationPrice(publicacion.precio)}</span>
             <span className={`truncate bg-slate-100 font-semibold text-slate-600 ${compact ? 'rounded px-1.5 py-0.5 text-[10px]' : 'rounded-full px-3 py-1 text-xs'}`}>{publicacion.categoria}</span>
           </div>
           {canMarkSold ? (

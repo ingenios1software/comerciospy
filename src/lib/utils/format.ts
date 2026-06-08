@@ -85,8 +85,10 @@ export const buildMapsUrl = (comercio: {
   return 'https://www.google.com/maps';
 };
 
-export const buildPublicCommerceUrl = (id: string) => {
-  return `${getAppUrl()}/comercios/${id}`;
+export const buildPublicCommerceUrl = (id: string, options?: { installPrompt?: boolean }) => {
+  const installQuery = options?.installPrompt ? '?install=1&source=digital-card' : '';
+
+  return `${getAppUrl()}/comercios/${id}${installQuery}`;
 };
 
 export const getAppUrl = () => {

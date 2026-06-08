@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import Script from 'next/script';
 import './globals.css';
 import { AuthProvider } from '@/lib/firebase/auth-context';
 import { Navbar } from '@/components/ui/navbar';
@@ -58,6 +59,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="es" suppressHydrationWarning>
       <body className="min-h-screen bg-surface text-slate-950 antialiased">
+        <Script id="capture-pwa-install-prompt" strategy="beforeInteractive">
+          {`
+            window.addEventListener('beforeinstallprompt', function (event) {
+              event.preventDefault();
+              window.__comerciosPyInstallPrompt = event;
+            });
+
+            window.addEventListener('appinstalled', function () {
+              window.__comerciosPyInstallPrompt = null;
+            });
+          `}
+        </Script>
         <AuthProvider>
           <Navbar />
           {children}

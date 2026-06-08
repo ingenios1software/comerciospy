@@ -31,7 +31,7 @@ function buildWhatsappShareUrl(text: string) {
 
 export function DigitalBusinessCard({ comercio, compact = false }: DigitalBusinessCardProps) {
   const [copied, setCopied] = useState(false);
-  const publicUrl = useMemo(() => buildPublicCommerceUrl(comercio.id), [comercio.id]);
+  const publicUrl = useMemo(() => buildPublicCommerceUrl(comercio.id, { installPrompt: true }), [comercio.id]);
   const shareText = useMemo(() => buildShareText(comercio, publicUrl), [comercio, publicUrl]);
   const whatsappShareUrl = buildWhatsappShareUrl(shareText);
 
