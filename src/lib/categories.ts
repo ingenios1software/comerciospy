@@ -10,6 +10,7 @@ export type CategoryGroup = Category & {
 export const categories: Category[] = [
   { id: 'Todos', label: 'Todas' },
   { id: 'Comida', label: 'Comida' },
+  { id: 'Panificados', label: 'Panificados' },
   { id: 'Bebidas', label: 'Bebidas' },
   { id: 'Moda', label: 'Moda' },
   { id: 'Ropas', label: 'Ropas' },
@@ -34,7 +35,7 @@ export const publicationCategories = categories.filter((category) => category.id
 
 export const categoryGroups: CategoryGroup[] = [
   { id: 'Todos', label: 'Todos los grupos', categoryIds: categories.filter((category) => category.id !== 'Todos').map((category) => category.id) },
-  { id: 'Gastronomia', label: 'Gastronomia', categoryIds: ['Comida', 'Bebidas'] },
+  { id: 'Gastronomia', label: 'Gastronomia', categoryIds: ['Comida', 'Panificados', 'Bebidas'] },
   { id: 'ModaBienestar', label: 'Moda y bienestar', categoryIds: ['Moda', 'Ropas', 'Calzados', 'Accesorios', 'Perfumes', 'Belleza', 'Bienestar'] },
   { id: 'ServiciosLocales', label: 'Servicios locales', categoryIds: ['Servicios', 'Electricidad', 'Plomeria'] },
   { id: 'HogarVivienda', label: 'Hogar y vivienda', categoryIds: ['Vivienda', 'Hogar'] },

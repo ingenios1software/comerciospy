@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { Ban, CalendarClock, CheckCircle2, CreditCard, Pencil, RefreshCw, Search, ShieldCheck, UserPlus, X } from 'lucide-react';
 import { Sidebar } from '@/components/layout/sidebar';
+import { CategorySelectField } from '@/components/ui/category-select-field';
 import { useAuth } from '@/lib/firebase/auth-context';
 import { categories } from '@/lib/categories';
 import { getAllComerciosForAdmin, getAllPlansForAdmin, getAllUsers, removeCommerceSubscriptionFields, updateCommerce, updateUserProfile } from '@/lib/firebase/firestore';
@@ -532,7 +533,15 @@ export default function AdminUsuariosPage() {
                     </div>
 
                     <div className="grid gap-4 sm:grid-cols-2">
-                      <SelectField id="categoria" label="Categoria" value={categoria} onChange={setCategoria} options={categoryOptions.map((category) => ({ value: category.label, label: category.label }))} />
+                      <CategorySelectField
+                        id="categoria"
+                        label="Categoria"
+                        value={categoria}
+                        onChange={setCategoria}
+                        options={categoryOptions}
+                        required
+                        controlClassName="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-950 outline-none transition focus:border-accent focus:ring-2 focus:ring-red-100"
+                      />
                       <Field id="ciudad" label="Ciudad" value={ciudad} onChange={setCiudad} placeholder="Ej: Asuncion, Pilar, San Ignacio, Saltos del Guaira" required />
                     </div>
 

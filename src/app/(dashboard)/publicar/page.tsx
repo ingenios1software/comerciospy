@@ -9,6 +9,7 @@ import { uploadFile } from '@/lib/firebase/storage';
 import { createPublication, getComercioById } from '@/lib/firebase/firestore';
 import { publicationCategories } from '@/lib/categories';
 import { RenewalNotice } from '@/components/subscription/renewal-notice';
+import { CategorySelectField } from '@/components/ui/category-select-field';
 import { isSubscriptionExpired } from '@/lib/subscription';
 import type { AiPublicationSuggestion, Comercio, Publicacion } from '@/types';
 
@@ -842,21 +843,14 @@ export default function PublicarPage() {
             </div>
 
             <div>
-              <label htmlFor="categoria" className="mb-2 block text-sm font-semibold text-slate-700">
-                Categoria del articulo
-              </label>
-              <select
+              <CategorySelectField
                 id="categoria"
+                label="Categoria del articulo"
                 value={categoria}
-                onChange={(event) => setCategoria(event.target.value)}
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-950 outline-none transition focus:border-accent focus:bg-white focus:ring-2 focus:ring-red-100"
-              >
-                {categoryOptions.map((option) => (
-                  <option key={option.id} value={option.label}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+                onChange={setCategoria}
+                options={categoryOptions}
+                required
+              />
             </div>
 
             <div>

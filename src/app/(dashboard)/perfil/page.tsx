@@ -7,6 +7,7 @@ import { Sidebar } from '@/components/layout/sidebar';
 import { ImageLightbox, type LightboxImage } from '@/components/ui/image-lightbox';
 import { RenewalNotice } from '@/components/subscription/renewal-notice';
 import { ChangePasswordCard } from '@/components/account/change-password-card';
+import { CategorySelectField } from '@/components/ui/category-select-field';
 import { useAuth } from '@/lib/firebase/auth-context';
 import { getComercioById, updateCommerce } from '@/lib/firebase/firestore';
 import { uploadFile } from '@/lib/firebase/storage';
@@ -511,21 +512,14 @@ export default function PerfilPage() {
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label htmlFor="categoria" className="mb-2 block text-sm font-semibold text-slate-700">
-                    Categoria
-                  </label>
-                  <select
+                  <CategorySelectField
                     id="categoria"
+                    label="Categoria"
                     value={categoria}
-                    onChange={(event) => setCategoria(event.target.value)}
-                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-950 outline-none transition focus:border-accent focus:bg-white focus:ring-2 focus:ring-red-100"
-                  >
-                    {categoryOptions.map((option) => (
-                      <option key={option.id} value={option.label}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={setCategoria}
+                    options={categoryOptions}
+                    required
+                  />
                 </div>
                 <Field id="horario" label="Horario" value={horario} onChange={setHorario} placeholder="Lun a sab, 08:00 - 18:00" required />
               </div>
