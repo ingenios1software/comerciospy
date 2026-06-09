@@ -45,6 +45,39 @@ service cloud.firestore {
         && (!('actualizadoEn' in request.resource.data) || request.resource.data.actualizadoEn is string);
     }
 
+    function isActiveSolicitud() {
+      return resource.data.estado == 'activa';
+    }
+
+    function isValidSolicitudCreate(solicitudId) {
+      return request.resource.data.keys().hasOnly([
+          'id',
+          'texto',
+          'categoria',
+          'ciudad',
+          'barrio',
+          'nombre',
+          'whatsapp',
+          'estado',
+          'creadoEn'
+        ])
+        && request.resource.data.id == solicitudId
+        && request.resource.data.texto is string
+        && request.resource.data.texto.size() >= 8
+        && request.resource.data.texto.size() <= 300
+        && request.resource.data.categoria is string
+        && request.resource.data.categoria.size() <= 60
+        && request.resource.data.ciudad is string
+        && request.resource.data.ciudad.size() <= 80
+        && request.resource.data.whatsapp is string
+        && request.resource.data.whatsapp.size() >= 6
+        && request.resource.data.whatsapp.size() <= 30
+        && request.resource.data.estado == 'activa'
+        && request.resource.data.creadoEn is string
+        && (!('barrio' in request.resource.data) || (request.resource.data.barrio is string && request.resource.data.barrio.size() <= 80))
+        && (!('nombre' in request.resource.data) || (request.resource.data.nombre is string && request.resource.data.nombre.size() <= 80));
+    }
+
     function isComercioOwner(comercioId) {
       return isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.comercioId == comercioId && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.rol == 'comercio';
     }
@@ -97,6 +130,12 @@ service cloud.firestore {
       allow read: if true;
       allow create, update: if isValidPublicationEngagement(publicacionId);
       allow delete: if isSuperAdmin();
+    }
+
+    match /solicitudes/{solicitudId} {
+      allow read: if isActiveSolicitud() || isAdmin();
+      allow create: if isValidSolicitudCreate(solicitudId);
+      allow update, delete: if isAdmin();
     }
 
     match /categorias/{categoriaId} {

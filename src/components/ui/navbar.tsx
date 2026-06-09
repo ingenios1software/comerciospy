@@ -80,6 +80,7 @@ export function Navbar() {
           { label: 'Inicio', href: '/' },
           { label: 'Guia', href: '/comercios' },
           { label: 'Carrito', href: '/carrito' },
+          { label: 'Solicitudes', href: '/solicitudes' },
           { label: 'Panel', href: '/admin' }
         ]
       : [
@@ -87,6 +88,7 @@ export function Navbar() {
         { label: 'Guia', href: '/comercios' },
         { label: 'Favoritos', href: '/favoritos' },
         { label: 'Carrito', href: '/carrito' },
+        { label: 'Solicitudes', href: '/solicitudes' },
         { label: 'Panel', href: '/dashboard' }
       ]
     : [
@@ -94,6 +96,7 @@ export function Navbar() {
         { label: 'Buscar gratis', href: '/comercios' },
         { label: 'Favoritos', href: '/favoritos' },
         { label: 'Carrito', href: '/carrito' },
+        { label: 'Solicitudes', href: '/solicitudes' },
         { label: 'Planes', href: '/planes' }
       ];
   const isActive = (href: string) => (href === '/' ? pathname === '/' : pathname.startsWith(href));

@@ -10,6 +10,10 @@ function getAppOrigin() {
   return typeof window !== 'undefined' ? window.location.origin : 'https://comerciospy.vercel.app';
 }
 
+function getCartPriceLabel(item: CartItem) {
+  return `Precio: ${item.price && item.price > 0 ? formatPrice(item.price) : '0'}`;
+}
+
 function buildCartMessage(items: CartItem[]) {
   const origin = getAppOrigin();
   const lines = ['Hola, quiero consultar estos articulos que vi en ComerciosPY:'];
@@ -17,7 +21,7 @@ function buildCartMessage(items: CartItem[]) {
   items.forEach((item, index) => {
     lines.push('');
     lines.push(`${index + 1}. #${item.code} - ${item.title}`);
-    if (item.price) lines.push(`Precio: ${formatPrice(item.price)}`);
+    lines.push(getCartPriceLabel(item));
     if (item.imageUrl) lines.push(`Foto: ${item.imageUrl}`);
     lines.push(`Ficha: ${origin}${item.href}`);
   });
@@ -110,7 +114,7 @@ export default function CarritoPage() {
                           <Link href={item.href} className="mt-0.5 line-clamp-2 text-sm font-semibold leading-5 text-slate-950">
                             {item.title}
                           </Link>
-                          <p className="mt-1 truncate text-xs font-semibold text-slate-600">{formatPrice(item.price) || item.subtitle || 'Consultar precio'}</p>
+                          <p className="mt-1 truncate text-xs font-semibold text-slate-600">{getCartPriceLabel(item)}</p>
                         </div>
                         <button
                           type="button"

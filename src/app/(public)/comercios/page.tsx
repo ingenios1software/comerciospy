@@ -12,6 +12,7 @@ import { cityMatches, getCityOptions } from '@/lib/cities';
 import { getAllComercios, getAllPublications } from '@/lib/firebase/firestore';
 import { sampleComercios, samplePublicaciones } from '@/lib/mockData';
 import { matchesCommerceSearch } from '@/lib/search';
+import { getSearchSuggestions } from '@/lib/search-suggestions';
 import type { Comercio, Publicacion } from '@/types';
 
 export default function ComerciosPage() {
@@ -49,6 +50,7 @@ export default function ComerciosPage() {
 
   const cityOptions = useMemo(() => getCityOptions(comercios), [comercios]);
   const categoryOptions = useMemo(() => getCategoriesForGroup(selectedCategoryGroup), [selectedCategoryGroup]);
+  const searchSuggestions = useMemo(() => getSearchSuggestions(search, comercios, publicaciones), [comercios, publicaciones, search]);
   const publicacionesByCommerceId = useMemo(() => {
     return publicaciones.reduce((map, publicacion) => {
       const current = map.get(publicacion.comercioId) ?? [];
@@ -65,6 +67,16 @@ export default function ComerciosPage() {
     if (selectedCategory !== 'Todos') params.set('category', selectedCategory);
     if (selectedCity !== 'Todas') params.set('city', selectedCity);
     router.push(`/comercios${params.toString() ? `?${params.toString()}` : ''}`);
+  };
+
+  const handleSuggestionSearch = (value: string) => {
+    setSearch(value);
+    const params = new URLSearchParams();
+    params.set('search', value);
+    if (selectedCategoryGroup !== 'Todos') params.set('group', selectedCategoryGroup);
+    if (selectedCategory !== 'Todos') params.set('category', selectedCategory);
+    if (selectedCity !== 'Todas') params.set('city', selectedCity);
+    router.push(`/comercios?${params.toString()}`);
   };
 
   const handleSelectCategoryGroup = (group: string) => {
@@ -140,6 +152,8 @@ export default function ComerciosPage() {
             placeholder="Buscar ciudad, categoria, grupo, contacto o articulo"
             buttonLabel="Buscar"
             size="compact"
+            suggestions={searchSuggestions}
+            onSuggestionSelect={handleSuggestionSearch}
           />
           <div className="space-y-3 rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
             <div className="flex items-center justify-between gap-3">

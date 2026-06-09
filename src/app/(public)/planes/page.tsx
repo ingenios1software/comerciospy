@@ -174,15 +174,15 @@ export default function PlanesPage() {
               <div className="space-y-2 p-3">
                 <div className="flex items-center justify-between gap-3 text-xs font-semibold text-slate-500">
                   <span>{selectedPlan?.nombre ?? 'Plan'}</span>
-                  <span>{selectedPlan ? formatPlanPrice(selectedPlan) : 'Gs. 0'}</span>
+                  <span>{selectedPlan ? formatPlanPrice(selectedPlan) : 'Consultar'}</span>
                 </div>
                 <div className="flex items-center justify-between gap-3 border-t border-slate-100 pt-2 text-xs font-semibold text-slate-500">
                   <span>Adicional</span>
-                  <span>Gs. 0</span>
+                  <span>Consultar</span>
                 </div>
                 <div className="border-t border-slate-100 pt-3">
                   <p className="text-xs font-semibold text-slate-500">Total</p>
-                  <p className="mt-1 text-2xl font-black text-emerald-600">{selectedPlan ? formatPlanPrice(selectedPlan) : 'Gs. 0'}</p>
+                  <p className="mt-1 text-2xl font-black text-emerald-600">{selectedPlan ? formatPlanPrice(selectedPlan) : 'Consultar'}</p>
                 </div>
               </div>
             </section>

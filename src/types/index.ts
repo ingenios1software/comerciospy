@@ -2,6 +2,13 @@ export type UserRole = 'superadmin' | 'admin' | 'comercio' | 'usuario' | 'client
 export type SubscriptionStatus = 'trial' | 'active' | 'past_due' | 'expired' | 'cancelled';
 export type PaymentStatus = 'pending' | 'paid' | 'overdue' | 'cancelled';
 export type CommerceVisibilityStatus = 'publicado' | 'oculto' | 'pendiente' | 'suspendido';
+export type PublicationPriceMode = 'consultar' | 'whatsapp' | 'desde' | 'fijo';
+export type PublicationBadge = 'abierto' | 'destacado' | 'oferta' | 'nuevo';
+
+export type ReviewSummary = {
+  promedio: number;
+  total?: number;
+};
 
 export type CommerceMetrics = {
   visitasFicha?: number;
@@ -61,6 +68,7 @@ export type CommercePreview = {
   nombre: string;
   rubro: string;
   ciudad: string;
+  barrio?: string;
   categoria: string;
   imagen: string;
   telefono?: string;
@@ -68,6 +76,14 @@ export type CommercePreview = {
   direccion?: string;
   horario?: string;
   fotos?: string[];
+  planNombre?: string;
+  destacado?: boolean;
+  verificado?: boolean;
+  valoracion?: ReviewSummary;
+  ubicacion?: {
+    lat: number;
+    lng: number;
+  };
 };
 
 export type Comercio = {
@@ -79,6 +95,7 @@ export type Comercio = {
   descripcion: string;
   resumen?: string;
   ciudad: string;
+  barrio?: string;
   categoria: string;
   direccion: string;
   telefono?: string;
@@ -102,6 +119,9 @@ export type Comercio = {
   pagoActualizadoEn?: string;
   visibilidadEstado?: CommerceVisibilityStatus;
   metricas?: CommerceMetrics;
+  destacado?: boolean;
+  valoracion?: ReviewSummary;
+  resenasHabilitadas?: boolean;
   ubicacionUrl?: string;
   ubicacion: {
     lat: number;
@@ -119,6 +139,8 @@ export type Publicacion = {
   titulo: string;
   descripcion: string;
   precio?: number | null;
+  precioModo?: PublicationPriceMode;
+  precioDesde?: boolean;
   imagenUrl: string;
   mediaUrl?: string;
   mediaType?: 'image' | 'video';
@@ -129,7 +151,22 @@ export type Publicacion = {
   vendidoEn?: string;
   categoria: string;
   ciudad: string;
+  barrio?: string;
+  destacado?: boolean;
+  etiquetas?: PublicationBadge[];
   activo: boolean;
+  creadoEn: string;
+};
+
+export type SolicitudCliente = {
+  id: string;
+  texto: string;
+  categoria: string;
+  ciudad: string;
+  barrio?: string;
+  nombre?: string;
+  whatsapp: string;
+  estado: 'activa' | 'cerrada' | 'oculta';
   creadoEn: string;
 };
 

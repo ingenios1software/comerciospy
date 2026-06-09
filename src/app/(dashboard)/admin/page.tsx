@@ -147,7 +147,7 @@ export default function AdminDashboardPage() {
       { label: 'Clics en WhatsApp', value: formatNumber(whatsappClicks), icon: MessageCircle },
       { label: 'Planes activos', value: formatNumber(activePlans), icon: CheckCircle2 },
       { label: 'Vencidos', value: formatNumber(expiredUsers.length), icon: XCircle, danger: expiredUsers.length > 0 },
-      { label: 'Facturación mensual estimada', value: formatPrice(estimatedBilling) || 'Gs. 0', icon: BarChart3 }
+      { label: 'Facturación mensual estimada', value: formatPrice(estimatedBilling) || 'Sin facturacion', icon: BarChart3 }
     ];
   }, [commerceUsers, comercios, plans, publicationCounts.pending, publicaciones]);
 

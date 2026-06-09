@@ -2,7 +2,7 @@ import { collection, deleteField, doc, getDoc, getDocs, getFirestore, increment,
 import { getFirebaseApp } from './firebase';
 import { isCommercePubliclyVisible } from '@/lib/subscription';
 import { defaultPlans, sortPlans } from '@/lib/plans';
-import type { Categoria, Comercio, PlanComercial, Publicacion, UsuarioApp } from '@/types';
+import type { Categoria, Comercio, PlanComercial, Publicacion, SolicitudCliente, UsuarioApp } from '@/types';
 import type { CommerceMetrics } from '@/types';
 
 export function getFirestoreInstance() {
@@ -14,16 +14,19 @@ const publicacionesCollection = (id: string) => doc(getFirestoreInstance(), 'pub
 const comerciosCollection = (id: string) => doc(getFirestoreInstance(), 'comercios', id);
 const categoriasCollection = (id: string) => doc(getFirestoreInstance(), 'categorias', id);
 const planesCollection = (id: string) => doc(getFirestoreInstance(), 'planes', id);
+const solicitudesCollection = (id: string) => doc(getFirestoreInstance(), 'solicitudes', id);
 const usersCollectionRef = () => collection(getFirestoreInstance(), 'users');
 const comerciosCollectionRef = () => collection(getFirestoreInstance(), 'comercios');
 const publicacionesCollectionRef = () => collection(getFirestoreInstance(), 'publicaciones');
 const categoriasCollectionRef = () => collection(getFirestoreInstance(), 'categorias');
 const planesCollectionRef = () => collection(getFirestoreInstance(), 'planes');
+const solicitudesCollectionRef = () => collection(getFirestoreInstance(), 'solicitudes');
 
 const activeComerciosQuery = () => query(comerciosCollectionRef(), where('activo', '==', true));
 const activePublicacionesQuery = () => query(publicacionesCollectionRef(), where('activo', '==', true));
 const activeCategoriasQuery = () => query(categoriasCollectionRef(), where('activo', '==', true));
 const activePlanesQuery = () => query(planesCollectionRef(), where('activo', '==', true));
+const activeSolicitudesQuery = () => query(solicitudesCollectionRef(), where('estado', '==', 'activa'));
 
 export async function createUserProfile(user: UsuarioApp) {
   return setDoc(usersCollection(user.id), user);
@@ -57,6 +60,20 @@ export async function markPublicationAsSold(id: string) {
     estado: 'vendido',
     vendidoEn: new Date().toISOString()
   });
+}
+
+function sortSolicitudesNewestFirst(solicitudes: SolicitudCliente[]) {
+  return [...solicitudes].sort((a, b) => new Date(b.creadoEn).getTime() - new Date(a.creadoEn).getTime());
+}
+
+export async function createSolicitudCliente(solicitud: SolicitudCliente) {
+  return setDoc(solicitudesCollection(solicitud.id), solicitud);
+}
+
+export async function getActiveSolicitudes(limit = 8): Promise<SolicitudCliente[]> {
+  const querySnapshot = await getDocs(activeSolicitudesQuery());
+
+  return sortSolicitudesNewestFirst(querySnapshot.docs.map((docItem) => docItem.data() as SolicitudCliente)).slice(0, limit);
 }
 
 function isPublicationPubliclyVisible(publicacion: Publicacion) {

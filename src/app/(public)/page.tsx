@@ -8,7 +8,10 @@ import {
   Heart,
   MapPin,
   Search,
+  ShieldCheck,
   ShoppingCart,
+  Sparkles,
+  Star,
   Store,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -20,19 +23,41 @@ import { categoryGroups, categoryMatchesFilter, getCategoriesForGroup, getCatego
 import { cityMatches, getCityOptions } from '@/lib/cities';
 import { getAllComercios, getAllPublications } from '@/lib/firebase/firestore';
 import { sampleComercios, samplePublicaciones } from '@/lib/mockData';
+import { getSearchSuggestions } from '@/lib/search-suggestions';
 import { matchesCommerceSearch } from '@/lib/search';
+import { useUserLocation } from '@/lib/location';
 import type { Comercio, Publicacion } from '@/types';
+
+const popularSearches = ['Electricistas', 'Panaderias', 'Mecanicos', 'Farmacias', 'Ferreterias'];
+
+function getCommerceImage(comercio: Comercio) {
+  return comercio.portadaUrl || comercio.logoUrl || comercio.fotos?.[0] || '';
+}
+
+function getFeaturedScore(comercio: Comercio) {
+  const planName = (comercio.planNombre ?? '').toLowerCase();
+  const hasPremiumPlan = Boolean(planName && !planName.includes('basico'));
+
+  return (
+    (comercio.destacado ? 80 : 0) +
+    (hasPremiumPlan ? 60 : 0) +
+    (comercio.verificado ? 20 : 0) +
+    Math.round((comercio.valoracion?.promedio ?? 0) * 5)
+  );
+}
 
 export default function Home() {
   const router = useRouter();
   const [comercios, setComercios] = useState<Comercio[]>(sampleComercios);
   const [publicaciones, setPublicaciones] = useState<Publicacion[]>(samplePublicaciones);
   const [searchValue, setSearchValue] = useState('');
+  const [showSearchSuggestions, setShowSearchSuggestions] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('Todos');
   const [selectedCategoryGroup, setSelectedCategoryGroup] = useState('Todos');
   const [selectedCity, setSelectedCity] = useState('Todas');
   const [loadingComercios, setLoadingComercios] = useState(true);
   const [loadingPublicaciones, setLoadingPublicaciones] = useState(true);
+  const userLocation = useUserLocation();
 
   useEffect(() => {
     const loadData = async () => {
@@ -100,6 +125,16 @@ export default function Home() {
     () => recentPublicaciones.map((publicacion) => ({ publicacion, comercio: comerciosById.get(publicacion.comercioId) })),
     [comerciosById, recentPublicaciones]
   );
+  const searchSuggestions = useMemo(
+    () => getSearchSuggestions(searchValue, comercios, publicaciones),
+    [comercios, publicaciones, searchValue]
+  );
+  const featuredComercios = useMemo(() => {
+    const source = visibleComercios.length > 0 ? visibleComercios : comercios;
+    return [...source]
+      .sort((a, b) => getFeaturedScore(b) - getFeaturedScore(a) || a.nombre.localeCompare(b.nombre, 'es'))
+      .slice(0, 4);
+  }, [comercios, visibleComercios]);
 
   const cityOptions = useMemo(() => getCityOptions(comercios), [comercios]);
   const categoryOptions = useMemo(() => getCategoriesForGroup(selectedCategoryGroup), [selectedCategoryGroup]);
@@ -170,6 +205,15 @@ export default function Home() {
     router.push(`/comercios${queryString ? `?${queryString}` : ''}`);
   };
 
+  const runQuickSearch = (query: string) => {
+    const nextQuery = query.trim();
+    if (!nextQuery) return;
+
+    setSearchValue(nextQuery);
+    const params = new URLSearchParams({ search: nextQuery });
+    router.push(`/comercios?${params.toString()}`);
+  };
+
   return (
     <main className="min-h-screen overflow-x-hidden bg-[#ededed] pb-24 pt-[68px] text-slate-950 sm:pt-[70px]">
       <section className="bg-[linear-gradient(180deg,#dc2626_0%,#b91c1c_100%)] text-white">
@@ -183,30 +227,70 @@ export default function Home() {
               <p className="hidden max-w-[330px] text-[11px] font-bold uppercase leading-4 text-red-50 sm:mt-2 sm:block sm:max-w-xl sm:text-[12px]">
                 Busca comercios, servicios, ofertas y contactos por WhatsApp.
               </p>
-              <form
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  handleSearch();
-                }}
-                className="mt-1 flex max-w-full overflow-hidden rounded-md bg-white p-1 shadow-[0_14px_34px_rgba(127,29,29,0.28)] sm:mt-4 sm:max-w-3xl"
-              >
-                <label htmlFor="home-search" className="sr-only">Buscar comercios</label>
-                <input
-                  id="home-search"
-                  type="search"
-                  value={searchValue}
-                  onChange={(event) => setSearchValue(event.target.value)}
-                  placeholder="Buscar ciudad, categoria, grupo, negocio, contacto o articulo"
-                  className="h-10 min-w-0 flex-1 px-3 text-[13px] font-semibold text-slate-900 outline-none placeholder:text-slate-400"
-                />
-                <button
-                  type="submit"
-                  className="inline-flex h-10 items-center justify-center gap-1 rounded-md bg-slate-950 px-3 text-[12px] font-bold text-white transition hover:bg-slate-800 sm:min-w-[92px]"
+              <div className="relative mt-1 max-w-full sm:mt-4 sm:max-w-3xl">
+                <form
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    handleSearch();
+                  }}
+                  className="flex overflow-hidden rounded-md bg-white p-1 shadow-[0_14px_34px_rgba(127,29,29,0.28)]"
                 >
-                  <Search className="h-4 w-4" />
-                  <span className="hidden sm:inline">Buscar</span>
-                </button>
-              </form>
+                  <label htmlFor="home-search" className="sr-only">Buscar comercios</label>
+                  <input
+                    id="home-search"
+                    type="search"
+                    value={searchValue}
+                    onChange={(event) => {
+                      setSearchValue(event.target.value);
+                      setShowSearchSuggestions(true);
+                    }}
+                    onFocus={() => setShowSearchSuggestions(true)}
+                    onBlur={() => window.setTimeout(() => setShowSearchSuggestions(false), 120)}
+                    placeholder="Buscar ciudad, categoria, grupo, negocio, contacto o articulo"
+                    className="h-10 min-w-0 flex-1 px-3 text-[13px] font-semibold text-slate-900 outline-none placeholder:text-slate-400"
+                  />
+                  <button
+                    type="submit"
+                    className="inline-flex h-10 items-center justify-center gap-1 rounded-md bg-slate-950 px-3 text-[12px] font-bold text-white transition hover:bg-slate-800 sm:min-w-[92px]"
+                  >
+                    <Search className="h-4 w-4" />
+                    <span className="hidden sm:inline">Buscar</span>
+                  </button>
+                </form>
+
+                {showSearchSuggestions && searchSuggestions.length > 0 ? (
+                  <div className="absolute left-0 right-0 top-[calc(100%_+_6px)] z-30 overflow-hidden rounded-md border border-slate-200 bg-white shadow-[0_16px_34px_rgba(15,23,42,0.18)]">
+                    {searchSuggestions.map((suggestion) => (
+                      <button
+                        key={`${suggestion.label}-${suggestion.hint}`}
+                        type="button"
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={() => runQuickSearch(suggestion.label)}
+                        className="flex h-10 w-full items-center justify-between gap-3 px-3 text-left text-[12px] font-bold text-slate-800 transition hover:bg-red-50 hover:text-accent"
+                      >
+                        <span className="truncate">{suggestion.label}</span>
+                        <span className="shrink-0 text-[10px] font-semibold text-slate-400">{suggestion.hint}</span>
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="mt-2 max-w-full sm:max-w-3xl">
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-red-100">Lo mas buscado</p>
+                <div className="mt-1 flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+                  {popularSearches.map((item) => (
+                    <button
+                      key={item}
+                      type="button"
+                      onClick={() => runQuickSearch(item)}
+                      className="shrink-0 rounded-md bg-white px-2.5 py-1.5 text-[11px] font-black text-accent shadow-sm transition hover:bg-amber-100"
+                    >
+                      {item}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
               <div className="mt-3 flex max-w-full min-w-0 gap-2 overflow-x-auto pb-1 scrollbar-none">
                 {categoryGroups.slice(0, 6).map((group) => (
@@ -230,6 +314,73 @@ export default function Home() {
       </section>
 
       <div className="mx-auto -mt-7 max-w-7xl space-y-3 px-3 sm:px-5">
+        {featuredComercios.length > 0 ? (
+          <section className="space-y-2">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h2 className="inline-flex items-center gap-1.5 rounded-md bg-white px-2.5 py-1.5 text-[16px] font-black text-slate-950 shadow-sm ring-1 ring-slate-200">
+                  <Star className="h-4 w-4 fill-amber-300 text-amber-500" />
+                  Negocios Destacados
+                </h2>
+                <p className="mt-1 text-[11px] font-semibold text-slate-600">Comercios con prioridad visual y contacto directo.</p>
+              </div>
+              <Link href="/planes" className="inline-flex items-center gap-1 rounded-md bg-slate-950 px-3 py-2 text-[11px] font-black text-white shadow-sm transition hover:bg-slate-800">
+                <Sparkles className="h-3.5 w-3.5" />
+                Destacar
+              </Link>
+            </div>
+
+            <div className="grid grid-flow-col gap-2 overflow-x-auto pb-2 scrollbar-none auto-cols-[220px] sm:auto-cols-[260px] lg:auto-cols-[280px]">
+              {featuredComercios.map((comercio) => {
+                const image = getCommerceImage(comercio);
+                const rating = comercio.valoracion?.promedio;
+
+                return (
+                  <article key={comercio.id} className="overflow-hidden rounded-md border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-amber-300 hover:shadow-soft">
+                    <Link href={`/comercios/${comercio.id}`} className="group block">
+                      <div className="relative aspect-[16/10] bg-slate-100">
+                        {image ? (
+                          <img src={image} alt={comercio.nombre} className="h-full w-full object-cover transition duration-300 group-hover:scale-105" />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-slate-400">
+                            <Store className="h-6 w-6" />
+                          </div>
+                        )}
+                        <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded bg-amber-300 px-2 py-1 text-[10px] font-black text-slate-950 shadow-sm">
+                          <Star className="h-3 w-3 fill-current" />
+                          Premium
+                        </span>
+                        {comercio.verificado ? (
+                          <span className="absolute right-2 top-2 inline-flex h-7 w-7 items-center justify-center rounded bg-emerald-600 text-white shadow-sm" aria-label="Comercio verificado">
+                            <ShieldCheck className="h-4 w-4" />
+                          </span>
+                        ) : null}
+                      </div>
+                      <div className="space-y-1.5 p-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="truncate rounded bg-red-50 px-2 py-0.5 text-[10px] font-black text-accent ring-1 ring-red-100">{comercio.categoria}</span>
+                          {Number.isFinite(rating) ? (
+                            <span className="inline-flex shrink-0 items-center gap-1 rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-black text-amber-700 ring-1 ring-amber-100">
+                              <Star className="h-3 w-3 fill-current" />
+                              {rating?.toFixed(1)}
+                            </span>
+                          ) : null}
+                        </div>
+                        <h3 className="truncate text-[15px] font-black leading-5 text-slate-950">{comercio.nombre}</h3>
+                        <p className="truncate text-[12px] font-semibold text-slate-600">{comercio.rubro}</p>
+                        <p className="flex min-w-0 items-center gap-1 text-[11px] font-semibold text-slate-500">
+                          <MapPin className="h-3.5 w-3.5 shrink-0 text-accent" />
+                          <span className="truncate">{comercio.barrio ? `${comercio.ciudad}, ${comercio.barrio}` : comercio.ciudad}</span>
+                        </p>
+                      </div>
+                    </Link>
+                  </article>
+                );
+              })}
+            </div>
+          </section>
+        ) : null}
+
         <section id="publicaciones" className="space-y-2">
           <div className="flex items-center justify-between gap-3">
             <div>
@@ -258,6 +409,7 @@ export default function Home() {
                   comercio={comercio}
                   variant="compact"
                   previewItems={recentPublicationPreviewItems}
+                  userLocation={userLocation}
                 />
               ))
             ) : (

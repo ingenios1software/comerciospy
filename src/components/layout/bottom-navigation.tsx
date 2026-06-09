@@ -1,7 +1,7 @@
 "use client";
 
 import Link from 'next/link';
-import { CreditCard, Heart, Home, List, LogOut, PlusCircle, ShoppingCart, Store, User, Users } from 'lucide-react';
+import { CreditCard, Heart, Home, List, LogOut, PlusCircle, ShoppingCart, Sparkles, Store, User, Users } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/firebase/auth-context';
 import { useCart } from '@/lib/cart';
@@ -30,12 +30,14 @@ export function BottomNavigation() {
         { label: 'Inicio', href: '/', icon: Home },
         { label: 'Guia', href: '/comercios', icon: List },
         { label: 'Favoritos', href: '/favoritos', icon: Heart },
-        { label: 'Carrito', href: '/carrito', icon: ShoppingCart }
+        { label: 'Carrito', href: '/carrito', icon: ShoppingCart },
+        { label: 'Solicitudes', href: '/solicitudes', icon: Sparkles }
       ]
     : user && profile?.rol === 'superadmin'
     ? [
         { label: 'Inicio', href: '/', icon: Home },
         { label: 'Guia', href: '/comercios', icon: List },
+        { label: 'Solicitudes', href: '/solicitudes', icon: Sparkles },
         { label: 'Panel', href: '/admin', icon: User },
         { label: 'Planes', href: '/admin/planes', icon: CreditCard },
         { label: 'Usuarios', href: '/admin/usuarios', icon: Users }
@@ -45,6 +47,7 @@ export function BottomNavigation() {
         { label: 'Inicio', href: '/', icon: Home },
         { label: 'Guia', href: '/comercios', icon: List },
         { label: 'Favoritos', href: '/favoritos', icon: Heart },
+        { label: 'Solicitudes', href: '/solicitudes', icon: Sparkles },
         { label: 'Publicar', href: '/publicar', icon: PlusCircle },
         { label: 'Perfil', href: '/perfil', icon: User }
       ]
@@ -53,6 +56,7 @@ export function BottomNavigation() {
         { label: 'Buscar', href: '/comercios', icon: List },
         { label: 'Favoritos', href: '/favoritos', icon: Heart },
         { label: 'Carrito', href: '/carrito', icon: ShoppingCart },
+        { label: 'Solicitudes', href: '/solicitudes', icon: Sparkles },
         { label: 'Planes', href: '/planes', icon: Store }
       ];
   const showLogout = !loading && Boolean(user);

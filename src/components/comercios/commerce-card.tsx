@@ -1,12 +1,12 @@
 "use client";
 
 import Link from 'next/link';
-import { ArrowUpRight, Clock, Images, MapPin, MessageCircle, Phone, Store } from 'lucide-react';
+import { ArrowUpRight, Clock, Images, MapPin, MessageCircle, Phone, ShieldCheck, Star, Store } from 'lucide-react';
 import type { Comercio, CommercePreview, Publicacion } from '@/types';
 import { FavoriteButton } from '@/components/favorites/favorite-button';
-import { getPublicationCode, getPublicationMediaUrl } from '@/lib/publications';
+import { formatPublicationPrice, getPublicationCode, getPublicationMediaUrl } from '@/lib/publications';
 import { trackCommerceMetric } from '@/lib/firebase/firestore';
-import { buildMapsUrl, buildWhatsappUrl, cleanPhone, formatPrice } from '@/lib/utils/format';
+import { buildMapsUrl, buildWhatsappUrl, cleanPhone } from '@/lib/utils/format';
 
 type CommerceCardProps = {
   comercio: CommercePreview | (Comercio & { imagen?: string });
@@ -41,6 +41,10 @@ export function CommerceCard({ comercio, publicaciones = [] }: CommerceCardProps
   const mainImage = getMainImage(comercio);
   const latestPublicaciones = [...publicaciones].sort((a, b) => getDateValue(b.creadoEn) - getDateValue(a.creadoEn)).slice(0, 3);
   const latestPublication = latestPublicaciones[0];
+  const latestPublicationPrice = latestPublication ? formatPublicationPrice(latestPublication) : '';
+  const ratingValue = comercio.valoracion?.promedio;
+  const hasRating = Number.isFinite(ratingValue);
+  const isVerified = Boolean(comercio.verificado);
   const publicationImages = latestPublicaciones
     .map((publicacion) => ({
       url: getPublicationMediaUrl(publicacion),
@@ -90,10 +94,26 @@ export function CommerceCard({ comercio, publicaciones = [] }: CommerceCardProps
             <h3 className="truncate text-[15px] font-semibold leading-5 text-slate-950">{comercio.nombre}</h3>
             <p className="truncate text-xs font-medium text-slate-600">{comercio.rubro}</p>
           </Link>
+          {hasRating || isVerified ? (
+            <div className="mt-1 flex min-w-0 items-center gap-1.5 text-[10px] font-semibold">
+              {hasRating ? (
+                <span className="inline-flex items-center gap-1 rounded bg-amber-50 px-1.5 py-0.5 text-amber-700 ring-1 ring-amber-100">
+                  <Star className="h-3 w-3 fill-current" />
+                  {ratingValue?.toFixed(1)}
+                </span>
+              ) : null}
+              {isVerified ? (
+                <span className="inline-flex min-w-0 items-center gap-1 rounded bg-emerald-50 px-1.5 py-0.5 text-emerald-700 ring-1 ring-emerald-100">
+                  <ShieldCheck className="h-3 w-3 shrink-0" />
+                  <span className="truncate">Verificado</span>
+                </span>
+              ) : null}
+            </div>
+          ) : null}
           <div className="mt-1 space-y-0.5">
             {latestPublication ? (
               <p className="truncate text-[11px] font-semibold text-slate-700">
-                Ultimo: {latestPublication.titulo}{latestPublication.precio ? ` - ${formatPrice(latestPublication.precio)}` : ''}
+                Ultimo: {latestPublication.titulo}{latestPublicationPrice ? ` - ${latestPublicationPrice}` : ''}
               </p>
             ) : (
               <p className="truncate text-[11px] text-slate-500">{comercio.direccion ?? 'Ubicacion disponible por WhatsApp'}</p>

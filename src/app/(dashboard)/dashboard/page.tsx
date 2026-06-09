@@ -247,7 +247,7 @@ export default function DashboardPage() {
                                 min="0"
                                 value={editPrice}
                                 onChange={(event) => setEditPrice(event.target.value)}
-                                placeholder="Sin precio = Gs. 0"
+                                placeholder="Sin precio = consultar"
                                 className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-950 outline-none focus:border-accent focus:ring-2 focus:ring-red-100"
                               />
                             </label>

@@ -10,6 +10,7 @@ export type CartItem = {
   href: string;
   imageUrl?: string;
   price?: number | null;
+  priceLabel?: string;
   comercioId: string;
   comercioNombre?: string;
   whatsapp?: string | null;

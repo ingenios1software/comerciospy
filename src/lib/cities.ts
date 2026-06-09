@@ -16,6 +16,7 @@ export const defaultCities: CityOption[] = [
   { id: 'Capiata', label: 'Capiata' },
   { id: 'Lambare', label: 'Lambare' },
   { id: 'Mariano Roque Alonso', label: 'Mariano Roque Alonso' },
+  { id: 'Curuguaty', label: 'Curuguaty' },
   { id: 'Encarnacion', label: 'Encarnacion' },
   { id: 'Ciudad del Este', label: 'Ciudad del Este' }
 ];

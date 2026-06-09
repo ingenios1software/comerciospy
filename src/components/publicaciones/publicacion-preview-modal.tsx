@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { type FormEvent, type TouchEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { CheckCircle2, ChevronLeft, ChevronRight, Heart, Loader2, MessageCircle, Send, Store, X } from 'lucide-react';
+import { CheckCircle2, ChevronLeft, ChevronRight, Heart, Loader2, MapPin, MessageCircle, Send, ShieldCheck, Star, Store, X } from 'lucide-react';
 import { CartButton } from '@/components/cart/cart-button';
 import { FavoriteButton } from '@/components/favorites/favorite-button';
 import { ShareMediaButton } from '@/components/ui/share-media-button';
@@ -12,12 +12,21 @@ import {
   hasLikedPublication,
   likePublication
 } from '@/lib/publication-engagement';
-import { buildPublicationWhatsappMessage, getPublicationCode, getPublicationHref, getPublicationMediaUrl } from '@/lib/publications';
-import { buildWhatsappUrl, formatPrice } from '@/lib/utils/format';
+import {
+  buildPublicationWhatsappMessage,
+  formatPublicationPrice,
+  getPublicationCode,
+  getPublicationHref,
+  getPublicationLocationLabel,
+  getPublicationMediaUrl
+} from '@/lib/publications';
+import { buildWhatsappUrl } from '@/lib/utils/format';
+import { formatDistanceKm, getDistanceKm, type UserLocation } from '@/lib/location';
 import type { CartItem } from '@/lib/cart';
 import type { Comercio, PublicationComment, PublicationEngagement, Publicacion } from '@/types';
 
-type PublicationPreviewCommerce = Pick<Comercio, 'id' | 'nombre' | 'whatsapp' | 'telefono'>;
+type PublicationPreviewCommerce = Pick<Comercio, 'id' | 'nombre' | 'whatsapp' | 'telefono'> &
+  Partial<Pick<Comercio, 'ciudad' | 'barrio' | 'direccion' | 'ubicacion' | 'verificado' | 'valoracion'>>;
 
 export type PublicationPreviewItem = {
   publicacion: Publicacion;
@@ -33,6 +42,7 @@ type PublicationPreviewModalProps = {
   canMarkSold?: (publicacion: Publicacion) => boolean;
   onMarkSold?: (publicacion: Publicacion) => void | Promise<void>;
   markingSold?: boolean;
+  userLocation?: UserLocation | null;
   onClose: () => void;
 };
 
@@ -40,6 +50,11 @@ function formatCommentDate(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '';
   return date.toLocaleDateString('es-PY', { day: '2-digit', month: '2-digit' });
+}
+
+function formatBadgeCount(value: number) {
+  if (value > 99) return '99+';
+  return String(Math.max(0, value));
 }
 
 function getInitialEngagement(publicationId: string): PublicationEngagement {
@@ -60,6 +75,7 @@ export function PublicacionPreviewModal({
   canMarkSold,
   onMarkSold,
   markingSold = false,
+  userLocation,
   onClose
 }: PublicationPreviewModalProps) {
   const previewItems = useMemo<PublicationPreviewItem[]>(
@@ -85,6 +101,13 @@ export function PublicacionPreviewModal({
     activeComercio?.whatsapp || activeComercio?.telefono,
     buildPublicationWhatsappMessage(activePublicacion, activeComercio, appOrigin)
   );
+  const priceLabel = formatPublicationPrice(activePublicacion);
+  const locationLabel = getPublicationLocationLabel(activePublicacion, activeComercio);
+  const distanceLabel = formatDistanceKm(getDistanceKm(userLocation, activeComercio?.ubicacion));
+  const ratingValue = activeComercio?.valoracion?.promedio;
+  const hasRating = Number.isFinite(ratingValue);
+  const isVerified = Boolean(activeComercio?.verificado);
+  const roundedRating = Math.round(ratingValue ?? 0);
   const showMarkSold = Boolean(onMarkSold && (!canMarkSold || canMarkSold(activePublicacion)));
   const [engagement, setEngagement] = useState<PublicationEngagement>(() => getInitialEngagement(activePublicacion.id));
   const [liked, setLiked] = useState(() => hasLikedPublication(activePublicacion.id));
@@ -104,6 +127,7 @@ export function PublicacionPreviewModal({
       href: publicationHref,
       imageUrl: mediaUrl,
       price: activePublicacion.precio,
+      priceLabel,
       comercioId: activePublicacion.comercioId,
       comercioNombre: activeComercio?.nombre,
       whatsapp: activeComercio?.whatsapp,
@@ -115,6 +139,7 @@ export function PublicacionPreviewModal({
       activeComercio?.whatsapp,
       activePublicacion,
       mediaUrl,
+      priceLabel,
       publicationCode,
       publicationHref
     ]
@@ -298,6 +323,13 @@ export function PublicacionPreviewModal({
               className="absolute right-3 top-3 sm:right-4 sm:top-4"
             />
           ) : null}
+          <span
+            className="absolute left-3 top-3 inline-flex h-9 items-center gap-1 rounded-xl bg-slate-950/75 px-2.5 text-xs font-semibold text-white shadow-soft backdrop-blur-sm sm:left-4 sm:top-4"
+            aria-label={`${engagement.likesCount} me gusta`}
+          >
+            <Heart className="h-4 w-4 fill-current" />
+            {loadingEngagement ? '...' : formatBadgeCount(engagement.likesCount)}
+          </span>
           {canNavigate ? (
             <>
               <button
@@ -325,7 +357,27 @@ export function PublicacionPreviewModal({
             <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
               <span className="rounded bg-red-50 px-2.5 py-1 uppercase text-accent ring-1 ring-red-100">{activePublicacion.tipo}</span>
               <span className="rounded bg-slate-100 px-2.5 py-1 text-slate-600">{activePublicacion.categoria}</span>
-              <span className="rounded bg-slate-100 px-2.5 py-1 text-slate-600">{formatPrice(activePublicacion.precio ?? 0)}</span>
+              <span className="rounded bg-slate-100 px-2.5 py-1 text-slate-600">{priceLabel}</span>
+              {locationLabel || distanceLabel ? (
+                <span className="inline-flex min-w-0 items-center gap-1 rounded bg-slate-100 px-2.5 py-1 text-slate-600">
+                  <MapPin className="h-3.5 w-3.5 shrink-0 text-accent" />
+                  <span className="truncate">{distanceLabel ? `${distanceLabel} - ${locationLabel}` : locationLabel}</span>
+                </span>
+              ) : null}
+              {hasRating ? (
+                <span className="inline-flex items-center gap-0.5 rounded bg-amber-50 px-2.5 py-1 text-amber-700 ring-1 ring-amber-100">
+                  {Array.from({ length: 5 }).map((_, index) => (
+                    <Star key={index} className={`h-3 w-3 ${index < roundedRating ? 'fill-current text-amber-500' : 'text-amber-200'}`} />
+                  ))}
+                  <span className="ml-1">{ratingValue?.toFixed(1)}</span>
+                </span>
+              ) : null}
+              {isVerified ? (
+                <span className="inline-flex items-center gap-1 rounded bg-emerald-50 px-2.5 py-1 text-emerald-700 ring-1 ring-emerald-100">
+                  <ShieldCheck className="h-3.5 w-3.5" />
+                  Comercio verificado
+                </span>
+              ) : null}
             </div>
             <h2 className="mt-3 text-2xl font-semibold leading-tight text-slate-950">{activePublicacion.titulo}</h2>
             <p className="mt-3 whitespace-pre-line text-sm leading-7 text-slate-600">{activePublicacion.descripcion}</p>
@@ -376,11 +428,7 @@ export function PublicacionPreviewModal({
           </section>
 
           <aside className="space-y-4">
-            <div className="grid grid-cols-2 gap-2">
-              <div className="rounded-2xl bg-slate-50 p-4 text-center">
-                <p className="text-2xl font-semibold text-slate-950">{loadingEngagement ? '...' : engagement.likesCount}</p>
-                <p className="mt-1 text-xs font-semibold text-slate-500">Me gusta</p>
-              </div>
+            <div>
               <div className="rounded-2xl bg-slate-50 p-4 text-center">
                 <p className="text-2xl font-semibold text-slate-950">{loadingEngagement ? '...' : engagement.commentsCount}</p>
                 <p className="mt-1 text-xs font-semibold text-slate-500">Comentarios</p>

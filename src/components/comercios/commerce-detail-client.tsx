@@ -11,6 +11,7 @@ import { ShareMediaButton } from '@/components/ui/share-media-button';
 import { sampleComercios, samplePublicaciones } from '@/lib/mockData';
 import { isCommercePubliclyVisible } from '@/lib/subscription';
 import { buildMapsUrl, buildWhatsappUrl, cleanPhone } from '@/lib/utils/format';
+import { useUserLocation } from '@/lib/location';
 import type { Comercio, Publicacion } from '@/types';
 
 type CommerceDetailClientProps = {
@@ -25,6 +26,7 @@ export function CommerceDetailClient({ commerceId, initialComercio, initialPubli
   const [selectedPublicationCategory, setSelectedPublicationCategory] = useState('Todos');
   const [activeGalleryIndex, setActiveGalleryIndex] = useState<number | null>(null);
   const [loading, setLoading] = useState(!initialComercio);
+  const userLocation = useUserLocation();
 
   useEffect(() => {
     let active = true;
@@ -306,6 +308,7 @@ export function CommerceDetailClient({ commerceId, initialComercio, initialPubli
                   comercio={comercio}
                   variant="compact"
                   previewItems={visiblePublicationPreviewItems}
+                  userLocation={userLocation}
                 />
               ))
             ) : (
