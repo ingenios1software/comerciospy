@@ -4,6 +4,14 @@ Guia web mobile-first para comercios locales y prestadores de servicios en Parag
 
 Creado y desarrollado por **IngenioSoft95**.
 
+## Guia de uso
+
+La guia practica para visitantes, comercios y administracion esta disponible en [GUIA_DE_USO.md](GUIA_DE_USO.md).
+
+## Guia de despliegue
+
+El procedimiento de despliegue, verificacion y rollback esta disponible en [DESPLIEGUE.md](DESPLIEGUE.md).
+
 ## Desarrollo local
 
 ```bash
